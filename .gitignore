@@ -1,0 +1,46 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Build outputs
+store-assets/
+build/
+dist/
+*.bundle.js
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+debug.log
+
+# Chrome Extension specific
+*.crx
+*.pem
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Testing
+coverage/
+
+# Except specific dot files we want to track
+!.gitignore
+!.prettierrc
+!.eslintrc 

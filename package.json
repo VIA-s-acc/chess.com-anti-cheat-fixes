@@ -1,0 +1,16 @@
+{
+  "name": "chess-risk-score",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clean": "rm -rf dist/",
+    "js": "./node_modules/.bin/esbuild src/frontend/{background,content,popup/popup,popup/RiskDisplay,options/options}.js --bundle --outdir=dist --format=iife --platform=browser --external:chrome",
+    "copy": "node scripts/copy-static.js",
+    "build": "npm run clean && mkdir -p dist/popup && cp src/frontend/popup/styles.css dist/popup/ && npm run js && npm run copy",
+    "test-risk": "node src/test-risk-score.js"
+  },
+  "devDependencies": {
+    "esbuild": "^0.19.0"
+  }
+}

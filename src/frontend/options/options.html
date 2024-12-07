@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Chess.com Risk Score Settings</title>
+    <link href="options.css" rel="stylesheet">
+</head>
+<body>
+    <div class="options-container">
+        <!-- General Settings -->
+        <h2>Settings</h2>
+        <div class="settings-group">
+            <div class="setting-item">
+                <label class="switch-label">
+                    <span>Consider rated games only</span>
+                    <div class="switch">
+                        <input type="checkbox" id="RATED_ONLY">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+                <div class="setting-description">
+                    Turn this off if you want unrated games to be considered as well. 
+                    Note that this might change the scoring results and lower the score significance.
+                </div>
+            </div>
+            
+            <div class="setting-item">
+                <label class="switch-label">
+                    <span>Auto-open popup when opponent detected</span>
+                    <div class="switch">
+                        <input type="checkbox" id="AUTO_OPEN_POPUP">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+                <div class="setting-description">
+                    Note: This feature requires Chrome version 127 or higher. 
+                    To check your version, visit chrome://version/
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="buttons-container">
+        <button id="save-settings" class="save-button">Save Settings</button>
+    </div>
+    <script src="options.js" type="module"></script>
+</body>
+</html> 

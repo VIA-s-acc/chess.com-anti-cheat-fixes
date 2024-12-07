@@ -1,0 +1,255 @@
+/* Base styles */
+body {
+    width: 320px;
+    height: 600px;
+    padding: 8px;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: #2c2b29;
+    color: white;
+    overflow: hidden;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+.popup-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 6px;
+    box-sizing: border-box;
+}
+
+/* Header */
+.header {
+    font-size: 1.25rem;
+    font-weight: bold;
+    color: white;
+    border-bottom: 1px solid #4b4847;
+    padding-bottom: 8px;
+    margin-bottom: 4px;
+    flex-shrink: 0;
+    padding-top: 8px;
+}
+
+/* Risk Score Section */
+.risk-score-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    background-color: rgba(75, 72, 71, 0.2);
+    border-radius: 8px;
+    text-align: center;
+    padding: 8px;
+}
+
+.max-score-display {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 12px;
+}
+
+.score-circle { transform: rotate(-90deg); }
+.score-background { stroke: rgba(75, 72, 71, 0.3); }
+.score-progress { transition: all 1s; }
+
+.score-text {
+    font-size: 2rem;
+    font-weight: bold;
+    fill: currentColor;
+}
+
+.score-value {
+    font-size: 2rem;
+}
+
+.score-percent {
+    font-size: 1.4rem;
+    dx: 2px;
+}
+
+.format-name {
+    font-size: 1.2rem;
+    margin-bottom: 4px;
+    color: white;
+}
+
+.risk-level {
+    font-size: 1.4rem;
+    font-weight: bold;
+}
+
+/* Format Items */
+.format-item {
+    background-color: rgba(75, 72, 71, 0.3);
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+}
+
+.format-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.format-risk {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+/* Factors Section */
+.factor-item {
+    background-color: rgba(75, 72, 71, 0.3);
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.factor-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.factor-details {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.factor-score {
+    display: flex;
+    gap: 8px;
+}
+
+.factor-games {
+    font-size: 0.85rem;
+    opacity: 0.7;
+}
+
+/* Calculation Section */
+.calculation-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calculation-title {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: white;
+}
+
+.calculation-formula {
+    background-color: rgba(75, 72, 71, 0.3);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.formula-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.formula-result {
+    display: flex;
+    justify-content: space-between;
+    padding-top: 8px;
+    margin-top: 8px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+}
+
+/* Risk level colors */
+.risk-low { color: #22c55e; stroke: #22c55e; }
+.risk-medium { color: #eab308; stroke: #eab308; }
+.risk-high { color: #ef4444; stroke: #ef4444; }
+.risk-critical { color: #dc2626; stroke: #dc2626; }
+
+/* Text colors */
+.text-muted {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+.score-display {
+    text-align: center;
+    margin-top: 12px;
+}
+
+.score-display .score-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.score-display .score-label {
+    font-size: 1.1rem;
+    color: white;
+    margin-top: 4px;
+}
+
+.score-display .risk-level {
+    font-size: 1.4rem;
+    font-weight: bold;
+    margin-top: 4px;
+}
+
+.section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: white;
+}
+
+.other-formats-section {
+    margin-top: 16px;
+    padding-top: 16px;
+    padding-bottom: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Header and info section */
+.header {
+    padding-top: 8px;
+    margin-bottom: 0;
+}
+
+.game-info {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 2px 0 0;
+}
+
+/* Contributing factors section */
+.factors-title {
+    padding-top: 8px;
+}
+
+/* Add class for centered muted text */
+.text-muted-center {
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    text-align: center;
+}
+
+.settings-icon {
+    float: right;
+    text-decoration: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    line-height: 1.25rem;
+    padding: 2px;
+}
+
+.settings-icon:hover {
+    color: white;
+}
+  
