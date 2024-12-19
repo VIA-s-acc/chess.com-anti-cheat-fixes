@@ -98,7 +98,16 @@ function calculateHighAccuracyScore(accuracyData, playerRating) {
         highAccuracyPercentage 
     } = accuracyData;
 
-    if (gamesWithAccuracy === 0) return 0;
+    if (gamesWithAccuracy === 0 || isNaN(highAccuracyPercentage)) {
+        return {
+            score: 0,
+            debug: {
+                baseScore: 0,
+                sampleWeight: 0,
+                reason: 'no_accuracy_data'
+            }
+        };
+    }
 
     // Early exit for low percentages
     if (highAccuracyPercentage <= HIGH_ACCURACY_THRESHOLDS.MODERATE_SUSPICION_THRESHOLD) {

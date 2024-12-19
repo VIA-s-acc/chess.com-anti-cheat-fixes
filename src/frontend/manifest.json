@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "Calculate risk scores for Chess.com opponents",
   "permissions": [
-    "storage",
-    "tabs"
+    "storage"
   ],
   "host_permissions": [
     "https://www.chess.com/*",

@@ -198,9 +198,13 @@ export class RiskDisplay {
 
         // Accuracy
         if (factors.accuracy) {
+            const accuracyPercentage = factors.accuracy.gamesWithAccuracy === 0 
+                ? 0 
+                : Math.round((factors.accuracy.highAccuracyGames / factors.accuracy.gamesWithAccuracy) * 100);
+            
             sections.push(formatFactor(
                 'High Accuracy Games',
-                Math.round((factors.accuracy.highAccuracyGames / factors.accuracy.gamesWithAccuracy) * 100),
+                accuracyPercentage,
                 factors.accuracy.weighted,
                 `${factors.accuracy.highAccuracyGames}/${factors.accuracy.gamesWithAccuracy}`
             ));

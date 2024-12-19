@@ -78,6 +78,35 @@ async function calculateFormatMetrics(stats, recentGames) {
 
     // Calculate accuracy metrics
     const gamesWithAccuracy = formatGames.filter(game => game.accuracy != null);
+    if (gamesWithAccuracy.length === 0) {
+        return {
+            currentRating: stats.rating || 0,
+            overallWinrate: calculateWinrate({
+                wins: stats.wins,
+                losses: stats.losses,
+                draws: stats.draws
+            }),
+            gamesCounts: {
+                total: stats.wins + stats.losses + stats.draws,
+                wins: stats.wins,
+                losses: stats.losses,
+                draws: stats.draws
+            },
+            recentGames: {
+                total: recentStats.wins + recentStats.losses + recentStats.draws,
+                wins: recentStats.wins,
+                losses: recentStats.losses,
+                draws: recentStats.draws,
+                winrate: calculateWinrate(recentStats)
+            },
+            accuracy: {
+                gamesWithAccuracy: 0,
+                highAccuracyGames: 0,
+                highAccuracyPercentage: 0
+            }
+        };
+    }
+
     const highAccuracyGames = gamesWithAccuracy.filter(game => {
         const threshold = game.playerRating < ACCURACY_THRESHOLDS.LOW_RATING.threshold
             ? ACCURACY_THRESHOLDS.LOW_RATING.requiredAccuracy
