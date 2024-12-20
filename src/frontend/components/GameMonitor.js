@@ -20,7 +20,7 @@ class GameMonitor {
         // Track current tab URL
         this.currentUrl = window.location.href;
 
-        // Add URL change listener
+        // Add URL change listener (retained as is, even if partially redundant)
         this.setupUrlChangeListener();
         
         // Wait for DOM to be ready
@@ -32,6 +32,22 @@ class GameMonitor {
 
         // Listen for navigation events
         this.setupNavigationListener();
+    }
+
+    // New helper method to wait for both players to be visible with usernames
+    async waitForGameReady(maxWaitMs = 5000, checkInterval = 500) {
+        const startTime = Date.now();
+        while (Date.now() - startTime < maxWaitMs) {
+            const bottomPlayerName = document.querySelector('.player-component.player-bottom .user-username-component.user-tagline-username');
+            const topPlayerName = document.querySelector('.player-component.player-top .user-username-component.user-tagline-username');
+            if (bottomPlayerName && bottomPlayerName.textContent.trim() &&
+                topPlayerName && topPlayerName.textContent.trim()) {
+                return true;
+            }
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+        console.warn('[GameMonitor] Page did not stabilize in time');
+        return false;
     }
 
     async initialize() {
@@ -56,6 +72,9 @@ class GameMonitor {
         // Notify background to show loading state
         await this.notifyStateChange('new_game', { gameId: gameId });
         
+        // Wait for DOM stabilization before detecting current player
+        await this.waitForGameReady();
+
         // Try to detect current player immediately
         await this.detectCurrentPlayer();
         
@@ -390,7 +409,8 @@ class GameMonitor {
         this.currentUrl = newUrl;
 
         // Check if we're entering or leaving a game page
-        const currentGameId = this.getGameIdFromUrl();
+        // Instead of getGameIdFromUrl, we rely on StorageService
+        const currentGameId = await StorageService.extractGameId(window.location.href);
         
         if (currentGameId) {
             // Entering a new game page OR game ID changed
@@ -409,7 +429,10 @@ class GameMonitor {
                 // Notify background to show loading state
                 await this.notifyStateChange('new_game', { gameId: currentGameId });
                 
-                // Initialize will trigger opponent detection and other checks
+                // Wait briefly for the page to settle before initializing
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                // Initialize will trigger detection and other checks
                 await this.initialize();
             }
         } else if (this.currentState.gameId) {
@@ -438,6 +461,9 @@ class GameMonitor {
             console.debug('[GameMonitor] Initializing for game:', gameId);
             this.currentState.gameId = gameId;
 
+            // Wait for DOM stability before detection
+            await this.waitForGameReady();
+
             // Try to detect current player immediately
             await this.detectCurrentPlayer();
             
@@ -451,4 +477,4 @@ class GameMonitor {
     // ... rest of the class remains the same ...
 }
 
-export default GameMonitor; 
+export default GameMonitor;

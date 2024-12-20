@@ -46,6 +46,13 @@ export class RiskDisplay {
     async updateDisplay(riskData) {
         console.debug('[RiskDisplay] Updating display with data:', riskData);
         
+        // If opponent username is not available or equals the current player, show loading.
+        if (!riskData.opponentUsername || (riskData.currentPlayer && riskData.opponentUsername === riskData.currentPlayer)) {
+            console.debug('[RiskDisplay] Opponent not ready or matches current player. Showing loading state...');
+            this.showLoading();
+            return;
+        }
+
         // Load current settings
         let userSettings;
         try {
@@ -60,7 +67,7 @@ export class RiskDisplay {
         const header = document.querySelector('.header');
         if (header) {
             const settingsIcon = header.querySelector('.settings-icon');
-            header.textContent = `Risk Score: ${riskData.opponentUsername || 'Unknown'}`;
+            header.textContent = `Risk Score: ${riskData.opponentUsername}`;
             if (settingsIcon) header.appendChild(settingsIcon);
             
             // Remove any existing game-info elements
@@ -297,4 +304,4 @@ export class RiskDisplay {
         // Clear stored score
         this.lastValidScore = null;
     }
-} 
+}

@@ -15,7 +15,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://www.chess.com/game/live/*"],
+      "matches": ["https://www.chess.com/game/live/*", "https://www.chess.com/play/online/new*"],
       "js": ["content.js"]
     }
   ],
