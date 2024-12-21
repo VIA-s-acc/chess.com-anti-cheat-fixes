@@ -174,7 +174,8 @@ class GameMonitor {
 
         // Detect opponent if needed
         if (!this.currentState.opponentUsername) {
-            const opponent = this.detectOpponent();
+            // Now we await detectOpponent since it is async
+            const opponent = await this.detectOpponent();
             if (opponent) {
                 console.debug('[GameMonitor] Opponent detected:', opponent);
                 this.currentState.opponentUsername = opponent;
@@ -198,43 +199,45 @@ class GameMonitor {
     }
 
     /**
-     * Detect opponent's username
+     * Detect opponent's username with retries
      */
-    detectOpponent() {
+    async detectOpponent() {
         if (!this.currentState.currentPlayer) {
             console.debug('[GameMonitor] Cannot detect opponent without current player');
             return null;
         }
 
-        // Look for top player (opponent)
-        const topPlayer = document.querySelector('.player-component.player-top');
-        if (!topPlayer) {
-            console.debug('[GameMonitor] No top player found');
-            return null;
+        const maxAttempts = 5;
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+            const topPlayer = document.querySelector('.player-component.player-top');
+            if (!topPlayer) {
+                console.debug(`[GameMonitor] No top player found (attempt ${attempt}), retrying...`);
+            } else {
+                const usernameElement = topPlayer.querySelector('.user-username-component.user-tagline-username');
+                if (!usernameElement) {
+                    console.debug(`[GameMonitor] No username element found in top player (attempt ${attempt}), retrying...`);
+                } else {
+                    const username = usernameElement.textContent.trim();
+                    if (this.isValidUsername(username)) {
+                        // Check if not already detected
+                        if (username !== this.currentState.opponentUsername) {
+                            console.debug('[GameMonitor] Found opponent:', username);
+                            return username;
+                        } else {
+                            console.debug('[GameMonitor] Opponent already detected:', username);
+                            return null;
+                        }
+                    } else {
+                        console.debug(`[GameMonitor] Invalid or placeholder username found: ${username} (attempt ${attempt}), retrying...`);
+                    }
+                }
+            }
+            // Wait a bit before next attempt
+            await new Promise(resolve => setTimeout(resolve, 500));
         }
 
-        const usernameElement = topPlayer.querySelector('.user-username-component.user-tagline-username');
-        if (!usernameElement) {
-            console.debug('[GameMonitor] No username element found in top player');
-            return null;
-        }
-
-        const username = usernameElement.textContent.trim();
-
-        // Validation checks
-        if (!this.isValidUsername(username)) {
-            console.debug('[GameMonitor] Invalid username found:', username);
-            return null;
-        }
-
-        // Skip if already detected
-        if (username === this.currentState.opponentUsername) {
-            console.debug('[GameMonitor] Opponent already detected:', username);
-            return null;
-        }
-
-        console.debug('[GameMonitor] Found opponent:', username);
-        return username;
+        console.warn('[GameMonitor] Failed to detect valid opponent after retries');
+        return null;
     }
 
     /**
@@ -409,7 +412,6 @@ class GameMonitor {
         this.currentUrl = newUrl;
 
         // Check if we're entering or leaving a game page
-        // Instead of getGameIdFromUrl, we rely on StorageService
         const currentGameId = await StorageService.extractGameId(window.location.href);
         
         if (currentGameId) {
@@ -473,8 +475,6 @@ class GameMonitor {
             console.debug('Error initializing game monitor:', error);
         }
     }
-
-    // ... rest of the class remains the same ...
 }
 
 export default GameMonitor;

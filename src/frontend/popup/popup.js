@@ -37,7 +37,18 @@ class PopupManager {
                         console.error('No data in updateRiskScore message');
                         return;
                     }
-                    this.display.updateDisplay(message.data);
+                    
+                    // New check: ensure opponentUsername is valid and not the same as currentPlayer
+                    const data = message.data;
+                    const opponentOk = data.opponentUsername && (!data.currentPlayer || data.opponentUsername !== data.currentPlayer);
+                    
+                    if (!opponentOk) {
+                        console.debug('[PopupManager] Opponent not stable yet. Showing loading.');
+                        this.display.showLoading();
+                        return;
+                    }
+
+                    this.display.updateDisplay(data);
                     break;
                     
                 case 'calculatingRiskScore':
@@ -65,4 +76,4 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         chrome.runtime.openOptionsPage();
     });
-}); 
+});
