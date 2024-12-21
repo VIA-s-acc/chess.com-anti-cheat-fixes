@@ -20,7 +20,12 @@ class GameMonitor {
         // Track current tab URL
         this.currentUrl = window.location.href;
 
-        // Add URL change listener (retained as is, even if partially redundant)
+        // Extract logged-in username from #notifications-request
+        const notifRequest = document.getElementById('notifications-request');
+        this.loggedInUsername = notifRequest ? notifRequest.getAttribute('username') : null;
+        console.debug('[GameMonitor] Logged in user:', this.loggedInUsername);
+
+        // Add URL change listener
         this.setupUrlChangeListener();
         
         // Wait for DOM to be ready
@@ -34,14 +39,48 @@ class GameMonitor {
         this.setupNavigationListener();
     }
 
-    // New helper method to wait for both players to be visible with usernames
+    // New helper to get username from player slot
+    getBottomUsername() {
+        const bottomPlayer = document.querySelector('.player-component.player-bottom');
+        if (!bottomPlayer) return null;
+        const usernameElement = bottomPlayer.querySelector('.user-username-component.user-tagline-username');
+        return usernameElement ? usernameElement.textContent.trim() : null;
+    }
+
+    getTopUsername() {
+        const topPlayer = document.querySelector('.player-component.player-top');
+        if (!topPlayer) return null;
+        const usernameElement = topPlayer.querySelector('.user-username-component.user-tagline-username');
+        return usernameElement ? usernameElement.textContent.trim() : null;
+    }
+
+    // Stabilize detection: wait until bottom matches logged-in user
+    async waitForCurrentPlayerStability(maxWaitMs = 5000, checkInterval = 500) {
+        const startTime = Date.now();
+        while (Date.now() - startTime < maxWaitMs) {
+            const bottomName = this.getBottomUsername();
+            if (bottomName === this.loggedInUsername) {
+                // Double check after a short delay to ensure it doesn't flip
+                await new Promise(r => setTimeout(r, checkInterval));
+                const reCheck = this.getBottomUsername();
+                if (reCheck === this.loggedInUsername) {
+                    console.debug('[GameMonitor] Current player stable:', this.loggedInUsername);
+                    return true;
+                }
+            }
+            await new Promise(resolve => setTimeout(resolve, checkInterval));
+        }
+        console.warn('[GameMonitor] Could not confirm stable current player as logged-in user.');
+        return false;
+    }
+
+    // Wait for both players to have some username before proceeding
     async waitForGameReady(maxWaitMs = 5000, checkInterval = 500) {
         const startTime = Date.now();
         while (Date.now() - startTime < maxWaitMs) {
-            const bottomPlayerName = document.querySelector('.player-component.player-bottom .user-username-component.user-tagline-username');
-            const topPlayerName = document.querySelector('.player-component.player-top .user-username-component.user-tagline-username');
-            if (bottomPlayerName && bottomPlayerName.textContent.trim() &&
-                topPlayerName && topPlayerName.textContent.trim()) {
+            const bottomPlayerName = this.getBottomUsername();
+            const topPlayerName = this.getTopUsername();
+            if (bottomPlayerName && bottomPlayerName.trim() && topPlayerName && topPlayerName.trim()) {
                 return true;
             }
             await new Promise(resolve => setTimeout(resolve, checkInterval));
@@ -51,7 +90,6 @@ class GameMonitor {
     }
 
     async initialize() {
-        // Check if we're on a game page first
         const gameId = await StorageService.extractGameId(window.location.href);
         if (!gameId) {
             console.debug('[GameMonitor] Not a game page, skipping initialization');
@@ -72,202 +110,83 @@ class GameMonitor {
         // Notify background to show loading state
         await this.notifyStateChange('new_game', { gameId: gameId });
         
-        // Wait for DOM stabilization before detecting current player
+        // Wait for DOM stabilization before detecting players
         await this.waitForGameReady();
 
-        // Try to detect current player immediately
-        await this.detectCurrentPlayer();
+        // Confirm current player matches logged-in user at bottom
+        const stable = await this.waitForCurrentPlayerStability();
+        if (!stable) {
+            // If not stable, we can still attempt detection, but might fail
+            console.warn('[GameMonitor] Current player not stable, attempting anyway.');
+        }
+
+        await this.detectCurrentPlayerAndOpponent();
         
         // Only set up observer if we're on a game page
         this.setupObserver();
     }
 
+    async detectCurrentPlayerAndOpponent() {
+        // After stabilization, bottom should be current user, top is opponent
+        const bottomUsername = this.getBottomUsername();
+        const topUsername = this.getTopUsername();
+
+        console.debug('[GameMonitor] Detected bottom username:', bottomUsername, 'top username:', topUsername);
+
+        // Current player must be the logged-in user
+        if (bottomUsername === this.loggedInUsername) {
+            this.currentState.currentPlayer = bottomUsername;
+            console.debug('[GameMonitor] Current player (bottom) confirmed:', bottomUsername);
+
+            // Wait a bit to ensure opponent is stable
+            await new Promise(r => setTimeout(r, 500));
+
+            // Now detect opponent
+            let attempts = 5;
+            while (attempts > 0 && (!this.currentState.opponentUsername)) {
+                const currentTop = this.getTopUsername();
+                if (this.isValidUsername(currentTop) && currentTop !== this.currentState.currentPlayer) {
+                    this.currentState.opponentUsername = currentTop;
+                    console.debug('[GameMonitor] Opponent detected:', currentTop);
+                } else {
+                    console.debug('[GameMonitor] Opponent not ready or invalid, retrying...');
+                    await new Promise(r => setTimeout(r, 500));
+                }
+                attempts--;
+            }
+
+            if (!this.currentState.opponentUsername) {
+                console.warn('[GameMonitor] Failed to detect opponent username after retries.');
+            } else {
+                await this.notifyStateChange('opponent_detected', { username: this.currentState.opponentUsername });
+            }
+
+        } else {
+            console.warn('[GameMonitor] Bottom player does not match logged-in user. This is unexpected. Retrying...');
+            // Retry stabilization
+            const stable = await this.waitForCurrentPlayerStability();
+            if (stable) {
+                await this.detectCurrentPlayerAndOpponent();
+            } else {
+                console.error('[GameMonitor] Cannot confirm current player as logged-in user after retries.');
+            }
+        }
+    }
+
     /**
-     * Detect current player's username
+     * This method is no longer needed as we now detect both at once
+     * but let's keep it to conform with the original structure.
+     * We'll just make it do nothing or minimal work.
      */
     async detectCurrentPlayer() {
         if (this.currentState.currentPlayer) {
             console.debug('[GameMonitor] Current player already detected:', this.currentState.currentPlayer);
             return;
         }
-
-        const maxAttempts = 5;
-        let attempts = 0;
-
-        while (attempts < maxAttempts && !this.currentState.currentPlayer) {
-            console.debug('[GameMonitor] Attempting to detect current player (attempt', attempts + 1, ')');
-            
-            // Look for bottom player (current user)
-            const bottomPlayer = document.querySelector('.player-component.player-bottom');
-            if (bottomPlayer) {
-                const usernameElement = bottomPlayer.querySelector('.user-username-component.user-tagline-username');
-                if (usernameElement) {
-                    const username = usernameElement.textContent.trim();
-                    if (username) {
-                        this.currentState.currentPlayer = username;
-                        console.debug('[GameMonitor] Current player detected:', username);
-                        return;
-                    }
-                }
-            }
-
-            attempts++;
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        console.warn('[GameMonitor] Failed to detect current player after', attempts, 'attempts');
+        // The actual detection is now done in detectCurrentPlayerAndOpponent()
+        console.debug('[GameMonitor] detectCurrentPlayer called but detection is handled elsewhere.');
     }
 
-    /**
-     * Set up mutation observer
-     */
-    setupObserver() {
-        this.observer = new MutationObserver(() => {
-            this.checkForGameChanges();
-        });
-
-        this.observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        // Initial check
-        this.checkForGameChanges();
-    }
-
-    /**
-     * Check if enough time has passed since last check
-     */
-    shouldCheck() {
-        const now = Date.now();
-        if (now - this.currentState.lastCheck < this.debounceInterval) {
-            return false;
-        }
-        this.currentState.lastCheck = now;
-        return true;
-    }
-
-    /**
-     * Check for game state changes
-     */
-    async checkForGameChanges() {
-        // Debounce checks
-        if (!this.shouldCheck()) return;
-
-        // Extract game ID
-        const gameId = await StorageService.extractGameId(window.location.href);
-        if (!gameId) return;
-
-        // If this is a new game, reset state
-        if (gameId !== this.currentState.gameId) {
-            console.debug('[GameMonitor] New game detected:', gameId);
-            this.currentState.gameId = gameId;
-            this.currentState.opponentUsername = null;
-            // Wait a bit for the page to load completely on new games
-            await new Promise(resolve => setTimeout(resolve, 1000));
-        }
-
-        // Ensure we have current player
-        if (!this.currentState.currentPlayer) {
-            await this.detectCurrentPlayer();
-        }
-
-        // Detect opponent if needed
-        if (!this.currentState.opponentUsername) {
-            // Now we await detectOpponent since it is async
-            const opponent = await this.detectOpponent();
-            if (opponent) {
-                console.debug('[GameMonitor] Opponent detected:', opponent);
-                this.currentState.opponentUsername = opponent;
-                await this.notifyStateChange('opponent_detected', { username: opponent });
-            }
-        }
-
-        // Check other states
-        const moves = this.detectMoves();
-        const aborted = this.detectGameAborted();
-
-        if (moves) {
-            this.currentState.moveList = moves;
-            await this.notifyStateChange('moves_updated', { moves });
-        }
-
-        if (aborted) {
-            this.currentState.isGameAborted = true;
-            await this.notifyStateChange('game_aborted');
-        }
-    }
-
-    /**
-     * Detect opponent's username with retries
-     */
-    async detectOpponent() {
-        if (!this.currentState.currentPlayer) {
-            console.debug('[GameMonitor] Cannot detect opponent without current player');
-            return null;
-        }
-
-        const maxAttempts = 5;
-        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-            const topPlayer = document.querySelector('.player-component.player-top');
-            if (!topPlayer) {
-                console.debug(`[GameMonitor] No top player found (attempt ${attempt}), retrying...`);
-            } else {
-                const usernameElement = topPlayer.querySelector('.user-username-component.user-tagline-username');
-                if (!usernameElement) {
-                    console.debug(`[GameMonitor] No username element found in top player (attempt ${attempt}), retrying...`);
-                } else {
-                    const username = usernameElement.textContent.trim();
-                    if (this.isValidUsername(username)) {
-                        // Check if not already detected
-                        if (username !== this.currentState.opponentUsername) {
-                            console.debug('[GameMonitor] Found opponent:', username);
-                            return username;
-                        } else {
-                            console.debug('[GameMonitor] Opponent already detected:', username);
-                            return null;
-                        }
-                    } else {
-                        console.debug(`[GameMonitor] Invalid or placeholder username found: ${username} (attempt ${attempt}), retrying...`);
-                    }
-                }
-            }
-            // Wait a bit before next attempt
-            await new Promise(resolve => setTimeout(resolve, 500));
-        }
-
-        console.warn('[GameMonitor] Failed to detect valid opponent after retries');
-        return null;
-    }
-
-    /**
-     * Validate username
-     * @param {string} username - Username to validate
-     * @returns {boolean} Is username valid
-     */
-    isValidUsername(username) {
-        // Skip empty or too short usernames
-        if (!username || username.length < 2) return false;
-
-        // Skip known false positives
-        const invalidUsernames = ['Opponent', 'Player', 'Anonymous'];
-        if (invalidUsernames.includes(username)) return false;
-
-        // Skip if it's the current player
-        if (username === this.currentState.currentPlayer) return false;
-
-        // Basic Chess.com username validation
-        // - Must be 2-20 characters
-        // - Can contain letters, numbers, underscore, hyphen
-        // - Must start with a letter
-        const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{1,19}$/;
-        return usernameRegex.test(username);
-    }
-
-    /**
-     * Detect moves from the move list
-     * @returns {Array|null} Array of moves if changed
-     */
     detectMoves() {
         const moveListRows = document.querySelectorAll('.main-line-row.move-list-row');
         const currentMoves = Array.from(moveListRows).map(row => row.textContent.trim());
@@ -278,10 +197,6 @@ class GameMonitor {
         return null;
     }
 
-    /**
-     * Detect if game was aborted
-     * @returns {boolean} True if game was aborted
-     */
     detectGameAborted() {
         if (this.currentState.isGameAborted) return false;
 
@@ -292,9 +207,18 @@ class GameMonitor {
         return headerTitle?.textContent.trim() === 'Game Aborted';
     }
 
-    /**
-     * Notify background script of state changes
-     */
+    isValidUsername(username) {
+        if (!username || username.length < 2) return false;
+
+        const invalidUsernames = ['Opponent', 'Player', 'Anonymous'];
+        if (invalidUsernames.includes(username)) return false;
+
+        // If it's the current player, it's not the opponent, but let's still allow validation here.
+        // We'll check equality separately.
+        const usernameRegex = /^[a-zA-Z][a-zA-Z0-9_-]{1,19}$/;
+        return usernameRegex.test(username);
+    }
+
     async notifyStateChange(type, data = {}) {
         try {
             await chrome.runtime.sendMessage({
@@ -317,9 +241,6 @@ class GameMonitor {
         }
     }
 
-    /**
-     * Clean up resources
-     */
     cleanup() {
         if (this.observer) {
             this.observer.disconnect();
@@ -327,32 +248,19 @@ class GameMonitor {
         }
     }
 
-    /**
-     * Extract game ID from URL
-     * @returns {string|null} Game ID or null if not a game page
-     */
     getGameIdFromUrl() {
-        // Remove URL parameters before matching
         const baseUrl = window.location.href.split('?')[0];
-        // Only match exact /game/live/ URLs, not /analysis/game/live/
         const match = baseUrl.match(/^https:\/\/www\.chess\.com\/game\/live\/(\d+)/);
         return match ? match[1] : null;
     }
 
-    /**
-     * Setup URL change detection
-     */
     setupUrlChangeListener() {
-        // Listen for URL changes
         let lastUrl = this.currentUrl;
-        
-        // Create observer for URL changes
         const urlObserver = new MutationObserver(() => {
             if (window.location.href !== lastUrl) {
                 console.debug('URL changed from', lastUrl, 'to', window.location.href);
                 lastUrl = window.location.href;
                 
-                // If we're leaving a game page, notify background
                 const currentGameId = this.getGameIdFromUrl();
                 if (this.currentState.gameId && !currentGameId) {
                     this.notifyStateChange('game_left');
@@ -367,31 +275,93 @@ class GameMonitor {
             }
         });
 
-        // Start observing URL changes
         urlObserver.observe(document, {
             subtree: true,
             childList: true
         });
     }
 
+    setupObserver() {
+        this.observer = new MutationObserver(() => {
+            this.checkForGameChanges();
+        });
+
+        this.observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        this.checkForGameChanges();
+    }
+
+    shouldCheck() {
+        const now = Date.now();
+        if (now - this.currentState.lastCheck < this.debounceInterval) {
+            return false;
+        }
+        this.currentState.lastCheck = now;
+        return true;
+    }
+
+    async checkForGameChanges() {
+        if (!this.shouldCheck()) return;
+
+        const gameId = await StorageService.extractGameId(window.location.href);
+        if (!gameId) return;
+
+        if (gameId !== this.currentState.gameId) {
+            console.debug('[GameMonitor] New game detected:', gameId);
+            this.currentState.gameId = gameId;
+            this.currentState.opponentUsername = null;
+            await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+
+        if (!this.currentState.currentPlayer) {
+            // If for some reason currentPlayer not set, try again
+            await this.detectCurrentPlayerAndOpponent();
+        }
+
+        if (!this.currentState.opponentUsername) {
+            // Try detecting opponent if missing
+            console.debug('[GameMonitor] Opponent missing, attempting detection.');
+            const currentTop = this.getTopUsername();
+            if (this.isValidUsername(currentTop) && currentTop !== this.currentState.currentPlayer) {
+                this.currentState.opponentUsername = currentTop;
+                console.debug('[GameMonitor] Opponent detected:', currentTop);
+                await this.notifyStateChange('opponent_detected', { username: currentTop });
+            } else {
+                console.debug('[GameMonitor] Opponent still not stable, will retry on next change.');
+            }
+        }
+
+        const moves = this.detectMoves();
+        const aborted = this.detectGameAborted();
+
+        if (moves) {
+            this.currentState.moveList = moves;
+            await this.notifyStateChange('moves_updated', { moves });
+        }
+
+        if (aborted) {
+            this.currentState.isGameAborted = true;
+            await this.notifyStateChange('game_aborted');
+        }
+    }
+
     setupNavigationListener() {
-        // Listen for History API changes
         window.addEventListener('popstate', () => this.handleUrlChange());
         
-        // Create observer for URL changes (for non-History API changes)
         const urlObserver = new MutationObserver(() => {
             if (window.location.href !== this.currentUrl) {
                 this.handleUrlChange();
             }
         });
 
-        // Observe document changes
         urlObserver.observe(document, {
             subtree: true,
             childList: true
         });
 
-        // Intercept pushState and replaceState
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 
@@ -411,15 +381,12 @@ class GameMonitor {
         console.debug('[GameMonitor] URL changed to:', newUrl);
         this.currentUrl = newUrl;
 
-        // Check if we're entering or leaving a game page
         const currentGameId = await StorageService.extractGameId(window.location.href);
         
         if (currentGameId) {
-            // Entering a new game page OR game ID changed
             if (currentGameId !== this.currentState.gameId) {
                 console.debug('[GameMonitor] New game detected:', currentGameId);
                 
-                // Reset state for new game
                 this.currentState = {
                     gameId: currentGameId,
                     currentPlayer: null,
@@ -428,17 +395,13 @@ class GameMonitor {
                     isGameAborted: false
                 };
                 
-                // Notify background to show loading state
                 await this.notifyStateChange('new_game', { gameId: currentGameId });
                 
-                // Wait briefly for the page to settle before initializing
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 
-                // Initialize will trigger detection and other checks
                 await this.initialize();
             }
         } else if (this.currentState.gameId) {
-            // Leaving a game page
             console.debug('[GameMonitor] Leaving game page');
             await this.notifyStateChange('game_left');
             this.currentState = {
@@ -451,25 +414,20 @@ class GameMonitor {
         }
     }
 
-    /**
-     * Initialize monitoring
-     */
     async init() {
         try {
-            // Get current game ID from URL
             const gameId = this.getGameIdFromUrl();
             if (!gameId) return;
 
             console.debug('[GameMonitor] Initializing for game:', gameId);
             this.currentState.gameId = gameId;
 
-            // Wait for DOM stability before detection
             await this.waitForGameReady();
+            const stable = await this.waitForCurrentPlayerStability();
+            if (stable) {
+                await this.detectCurrentPlayerAndOpponent();
+            }
 
-            // Try to detect current player immediately
-            await this.detectCurrentPlayer();
-            
-            // Only set up observer if we're on a game page
             this.setupObserver();
         } catch (error) {
             console.debug('Error initializing game monitor:', error);
