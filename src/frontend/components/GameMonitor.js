@@ -136,7 +136,21 @@ class GameMonitor {
 
         console.debug('[GameMonitor] Detected bottom username:', bottomUsername, 'top username:', topUsername);
 
-        // Current player must be the logged-in user
+        // Check if we're spectating (neither player is logged-in user)
+        const isSpectating = this.loggedInUsername && 
+                            bottomUsername !== this.loggedInUsername && 
+                            topUsername !== this.loggedInUsername;
+
+        if (isSpectating) {
+            // In spectator mode, just use the detected usernames
+            this.currentState.currentPlayer = bottomUsername;
+            this.currentState.opponentUsername = topUsername;
+            console.debug('[GameMonitor] Spectating game between:', bottomUsername, 'and', topUsername);
+            await this.notifyStateChange('opponent_detected', { username: topUsername });
+            return;
+        }
+
+        // Not spectating - ensure proper player assignment
         if (bottomUsername === this.loggedInUsername) {
             this.currentState.currentPlayer = bottomUsername;
             console.debug('[GameMonitor] Current player (bottom) confirmed:', bottomUsername);
@@ -153,11 +167,7 @@ class GameMonitor {
                     console.debug('[GameMonitor] Opponent detected:', currentTop);
                 } else {
                     console.debug('[GameMonitor] Opponent not ready or invalid, retrying...');
-                    
-                    // Notify background that we're still calculating, so popup won't get stuck
-                    // This ensures if the user opens the popup now, they'll see a "calculating" state
                     await this.notifyStateChange('opponent_pending', { partial: true });
-
                     await new Promise(r => setTimeout(r, 500));
                 }
                 attempts--;
