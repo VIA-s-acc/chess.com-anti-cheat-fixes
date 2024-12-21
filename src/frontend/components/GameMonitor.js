@@ -126,6 +126,9 @@ class GameMonitor {
         this.setupObserver();
     }
 
+    /**
+     * Detect current player and opponent together
+     */
     async detectCurrentPlayerAndOpponent() {
         // After stabilization, bottom should be current user, top is opponent
         const bottomUsername = this.getBottomUsername();
@@ -150,6 +153,11 @@ class GameMonitor {
                     console.debug('[GameMonitor] Opponent detected:', currentTop);
                 } else {
                     console.debug('[GameMonitor] Opponent not ready or invalid, retrying...');
+                    
+                    // Notify background that we're still calculating, so popup won't get stuck
+                    // This ensures if the user opens the popup now, they'll see a "calculating" state
+                    await this.notifyStateChange('opponent_pending', { partial: true });
+
                     await new Promise(r => setTimeout(r, 500));
                 }
                 attempts--;
@@ -174,16 +182,13 @@ class GameMonitor {
     }
 
     /**
-     * This method is no longer needed as we now detect both at once
-     * but let's keep it to conform with the original structure.
-     * We'll just make it do nothing or minimal work.
+     * Kept for compatibility but does minimal work now
      */
     async detectCurrentPlayer() {
         if (this.currentState.currentPlayer) {
             console.debug('[GameMonitor] Current player already detected:', this.currentState.currentPlayer);
             return;
         }
-        // The actual detection is now done in detectCurrentPlayerAndOpponent()
         console.debug('[GameMonitor] detectCurrentPlayer called but detection is handled elsewhere.');
     }
 
@@ -331,6 +336,8 @@ class GameMonitor {
                 await this.notifyStateChange('opponent_detected', { username: currentTop });
             } else {
                 console.debug('[GameMonitor] Opponent still not stable, will retry on next change.');
+                // Optionally notify partial state so popup can show calculating...
+                await this.notifyStateChange('opponent_pending', { partial: true });
             }
         }
 
@@ -397,6 +404,7 @@ class GameMonitor {
                 
                 await this.notifyStateChange('new_game', { gameId: currentGameId });
                 
+                // Delay to let DOM partially stabilize
                 await new Promise(resolve => setTimeout(resolve, 1500));
                 
                 await this.initialize();

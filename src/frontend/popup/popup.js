@@ -23,6 +23,10 @@ class PopupManager {
                 this.port = null;
                 this.display.showError('Connection lost');
             });
+
+            // After successfully connecting, request current state
+            this.port.postMessage({ action: 'getCurrentState' });
+
         } catch (error) {
             console.error('Failed to connect:', error);
             this.display.showError('Failed to connect');
@@ -37,18 +41,23 @@ class PopupManager {
                         console.error('No data in updateRiskScore message');
                         return;
                     }
-                    
-                    // New check: ensure opponentUsername is valid and not the same as currentPlayer
+
+                    // Comment out the strict opponent check:
+                    /*
                     const data = message.data;
-                    const opponentOk = data.opponentUsername && (!data.currentPlayer || data.opponentUsername !== data.currentPlayer);
-                    
+                    const opponentOk =
+                        data.opponentUsername &&
+                        (!data.currentPlayer || data.opponentUsername !== data.currentPlayer);
+
                     if (!opponentOk) {
                         console.debug('[PopupManager] Opponent not stable yet. Showing loading.');
                         this.display.showLoading();
                         return;
                     }
+                    */
 
-                    this.display.updateDisplay(data);
+                    // Directly update display without the extra opponent check
+                    this.display.updateDisplay(message.data);
                     break;
                     
                 case 'calculatingRiskScore':

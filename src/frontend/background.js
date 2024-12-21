@@ -55,13 +55,44 @@ chrome.runtime.onConnect.addListener((port) => {
             log('debug', 'Could not clear badge text:', error);
         }
         
-        // Send last risk score if available
+        // If we have a lastRiskScore, send it
         if (lastRiskScore) {
             port.postMessage({
                 action: 'updateRiskScore',
                 data: lastRiskScore
             });
+        } 
+        // If we have an opponent but no score, calculate it
+        else if (currentGameState.opponentUsername) {
+            port.postMessage({ action: 'calculatingRiskScore' });
+            // Trigger recalculation
+            handleGameStateChange('opponent_detected', {
+                username: currentGameState.opponentUsername,
+                timestamp: Date.now()
+            });
         }
+
+        // Handle requests from the popup
+        port.onMessage.addListener((msg) => {
+            if (msg.action === 'getCurrentState') {
+                log('debug', 'Popup requested current state.');
+                // Use same logic as above for consistency
+                if (lastRiskScore) {
+                    port.postMessage({
+                        action: 'updateRiskScore',
+                        data: lastRiskScore
+                    });
+                } else if (currentGameState.opponentUsername) {
+                    port.postMessage({ action: 'calculatingRiskScore' });
+                    handleGameStateChange('opponent_detected', {
+                        username: currentGameState.opponentUsername,
+                        timestamp: Date.now()
+                    });
+                } else {
+                    port.postMessage({ action: 'clearDisplay' });
+                }
+            }
+        });
         
         port.onDisconnect.addListener(() => {
             log('debug', 'Popup disconnected');
@@ -146,7 +177,10 @@ async function handleGameStateChange(updateType, data) {
                     isGameAborted: false,
                     timestamp: data.timestamp
                 };
-                lastRiskScore = null;
+                if (lastRiskScore && lastRiskScore.opponentUsername !== data.username) {
+                    lastRiskScore = null;
+                }
+
 
                 // Load user settings or fall back to defaults
                 let userSettings;
@@ -194,7 +228,10 @@ async function handleGameStateChange(updateType, data) {
                 try {
                     // Calculate risk score
                     const riskScore = await calculateRiskScoreFromUsername(data.username, true);
-                    lastRiskScore = riskScore;  // Store the score
+                    lastRiskScore = {
+                        ...riskScore,
+                        opponentUsername: data.username
+                    };  // Store the score
                     
                     // Log format comparison
                     log('info', '\nFormat Comparison:');
@@ -262,5 +299,4 @@ async function handleGameStateChange(updateType, data) {
     } catch (error) {
         log('error', 'Error handling game update:', error);
     }
-} 
-
+}
