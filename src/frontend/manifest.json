@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Chess.com Opponent Risk Score",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Calculate risk scores for Chess.com opponents",
   "permissions": [
     "storage"

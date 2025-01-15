@@ -223,7 +223,7 @@ async function handleGameStateChange(updateType, data) {
                 log('info', `Starting API calls for ${data.username}...`);
                 log('info', `Fetching player data from https://api.chess.com/pub/player/${data.username}`);
                 log('info', `Fetching stats from https://api.chess.com/pub/player/${data.username}/stats`);
-                log('info', `Fetching games from https://api.chess.com/pub/player/${data.username}/games/2024/11`);
+                log('info', `Fetching games from https://api.chess.com/pub/player/${data.username}/games/...`);
                 
                 try {
                     // Calculate risk score

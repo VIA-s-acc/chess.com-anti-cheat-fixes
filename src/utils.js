@@ -128,10 +128,13 @@ async function fetchRecentGames(username) {
             const prevDate = new Date(date.setMonth(date.getMonth() - 1));
             monthsToFetch.push({
                 year: prevDate.getFullYear(),
-                month: prevDate.getMonth() + 1
+                month: String(prevDate.getMonth() + 1).padStart(2, '0')
             });
         }
-        monthsToFetch.push({ year: currentYear, month: currentMonth });
+        monthsToFetch.push({ 
+            year: currentYear, 
+            month: String(currentMonth).padStart(2, '0') 
+        });
 
         const gamesPromises = monthsToFetch.map(({ year, month }) =>
             fetchWithRetry(`${API_BASE_URL}/player/${username}/games/${year}/${month}`)
