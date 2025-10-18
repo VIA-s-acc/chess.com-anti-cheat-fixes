@@ -1,6 +1,7 @@
 import { calculateRiskScoreFromUsername } from '../../src/risk-score.js';
 import { SETTINGS } from '../../src/config.js';
 import SettingsManager from './options/SettingsManager.js';
+import historyService from './services/HistoryService.js';
 
 // Custom logging function to show logs in both console and service worker
 function log(level, ...args) {
@@ -241,7 +242,30 @@ async function handleGameStateChange(updateType, data) {
                         ...riskScore,
                         opponentUsername: data.username
                     };  // Store the score
-                    
+
+                    // Save to history
+                    try {
+                        await historyService.saveEntry({
+                            username: data.username,
+                            gameId: data.gameId || currentGameState.gameId || 'unknown',
+                            riskScore: {
+                                overall: Math.round(riskScore.maxScore.value),
+                                format: riskScore.maxScore.format,
+                                details: riskScore.maxScore.factors
+                            },
+                            playerStats: {
+                                rating: riskScore.maxScore.factors?.accuracy?.playerRating || null,
+                                winRate: riskScore.maxScore.factors?.overallWinRate?.raw || null,
+                                recentWinRate: riskScore.maxScore.factors?.recentWinRate?.raw || null,
+                                accuracy: riskScore.maxScore.factors?.accuracy?.raw || null
+                            }
+                        });
+                        log('info', 'Risk score saved to history');
+                    } catch (historyError) {
+                        log('error', 'Failed to save to history:', historyError);
+                        // Don't fail the whole operation if history save fails
+                    }
+
                     // Log format comparison
                     log('info', '\nFormat Comparison:');
                     log('info', `Max Score Format: ${riskScore.maxScore.format} = ${Math.round(riskScore.maxScore.value)}%`);
