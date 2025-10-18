@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh milestone create \"Code Quality & Bug Fixes v1.1\" --description \"Critical bug fixes and code quality improvements identified in code audit\" --due-date \"2025-11-18\")",
+      "Bash(git checkout -b fix/code-quality-improvements)",
+      "Bash(git add src/frontend/components/GameMonitor.js src/risk-score.js src/test-metrics.js src/utils.js)",
+      "Bash(git remote set-url fork https://github.com/VIA-s-acc/chess.com-anti-cheat-fixes.git)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
