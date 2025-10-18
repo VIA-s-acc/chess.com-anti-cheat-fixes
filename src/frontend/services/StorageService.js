@@ -56,10 +56,12 @@ export class StorageService {
 
     /**
      * Extract game ID from Chess.com URL
+     * Supports both /game/live/{id} and /game/{id} formats
      */
     extractGameId(url) {
         try {
-            const match = url.match(/\/game\/live\/(\d+)/);
+            // Try both URL patterns: /game/live/12345 and /game/12345
+            const match = url.match(/\/game\/(?:live\/)?(\d+)/);
             return match ? match[1] : null;
         } catch (error) {
             console.debug('StorageService: Error extracting game ID:', error);

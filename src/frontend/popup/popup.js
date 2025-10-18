@@ -65,7 +65,7 @@ class PopupManager {
                     break;
                     
                 case 'clearDisplay':
-                    this.display.showLoading();
+                    this.display.showInfo('No active game detected', 'Open a live Chess.com game to analyze your opponent');
                     break;
                     
                 default:

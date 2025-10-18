@@ -40,17 +40,51 @@ class GameMonitor {
 
     // New helper to get username from player slot
     getBottomUsername() {
-        const bottomPlayer = document.querySelector('.player-component.player-bottom');
-        if (!bottomPlayer) return null;
-        const usernameElement = bottomPlayer.querySelector('.user-username-component.user-tagline-username');
-        return usernameElement ? usernameElement.textContent.trim() : null;
+        // Try multiple selectors for compatibility (updated for current Chess.com DOM)
+        const selectors = [
+            '.player-component.player-bottom .cc-user-username-component',
+            '.player-bottom [data-test-element="user-tagline-username"]',
+            '.player-component.player-bottom .user-username-component.user-tagline-username',
+            '.player-bottom .user-tagline-username'
+        ];
+
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.trim()) {
+                console.log('[GameMonitor] Found bottom username with selector:', selector);
+                return element.textContent.trim();
+            }
+        }
+
+        console.warn('[GameMonitor] Could not find bottom username with any selector');
+        console.log('[GameMonitor] Available player elements:',
+            Array.from(document.querySelectorAll('[class*="player"]')).map(el => ({
+                classes: el.className,
+                text: el.textContent.substring(0, 50)
+            }))
+        );
+        return null;
     }
 
     getTopUsername() {
-        const topPlayer = document.querySelector('.player-component.player-top');
-        if (!topPlayer) return null;
-        const usernameElement = topPlayer.querySelector('.user-username-component.user-tagline-username');
-        return usernameElement ? usernameElement.textContent.trim() : null;
+        // Try multiple selectors for compatibility (updated for current Chess.com DOM)
+        const selectors = [
+            '.player-component.player-top .cc-user-username-component',
+            '.player-top [data-test-element="user-tagline-username"]',
+            '.player-component.player-top .user-username-component.user-tagline-username',
+            '.player-top .user-tagline-username'
+        ];
+
+        for (const selector of selectors) {
+            const element = document.querySelector(selector);
+            if (element && element.textContent.trim()) {
+                console.log('[GameMonitor] Found top username with selector:', selector);
+                return element.textContent.trim();
+            }
+        }
+
+        console.warn('[GameMonitor] Could not find top username with any selector');
+        return null;
     }
 
     // Stabilize detection: wait until bottom matches logged-in user

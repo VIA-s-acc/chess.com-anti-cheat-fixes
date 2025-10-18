@@ -287,6 +287,30 @@ export class RiskDisplay {
         return 'risk-critical';
     }
 
+    /**
+     * Show informational message
+     */
+    showInfo(title, message) {
+        // Reset circle
+        this.scoreCircle.setAttribute('stroke-dasharray', '0 283');
+        this.scoreCircle.setAttribute('class', 'score-progress');
+
+        // Show info message
+        this.scoreDisplay.innerHTML = `
+            <div class="score-value" style="font-size: 18px;">ℹ️</div>
+            <div class="score-label">${title}</div>
+        `;
+
+        // Show message in factors area
+        this.factors.innerHTML = `
+            <div style="padding: 20px; text-align: center; color: #666;">
+                ${message}
+            </div>
+        `;
+
+        this.lastValidScore = null;
+    }
+
     clearDisplay() {
         // Reset circle
         this.scoreCircle.setAttribute('stroke-dasharray', '0 283');
