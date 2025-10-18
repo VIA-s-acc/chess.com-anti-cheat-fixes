@@ -76,19 +76,28 @@ chrome.runtime.onConnect.addListener((port) => {
         port.onMessage.addListener((msg) => {
             if (msg.action === 'getCurrentState') {
                 log('debug', 'Popup requested current state.');
+                log('debug', 'Current state:', {
+                    hasLastRiskScore: !!lastRiskScore,
+                    opponentUsername: currentGameState.opponentUsername,
+                    gameId: currentGameState.gameId
+                });
+
                 // Use same logic as above for consistency
                 if (lastRiskScore) {
+                    log('debug', 'Sending last risk score to popup');
                     port.postMessage({
                         action: 'updateRiskScore',
                         data: lastRiskScore
                     });
                 } else if (currentGameState.opponentUsername) {
+                    log('debug', 'Calculating risk score for:', currentGameState.opponentUsername);
                     port.postMessage({ action: 'calculatingRiskScore' });
                     handleGameStateChange('opponent_detected', {
                         username: currentGameState.opponentUsername,
                         timestamp: Date.now()
                     });
                 } else {
+                    log('debug', 'No game data available, clearing display');
                     port.postMessage({ action: 'clearDisplay' });
                 }
             }

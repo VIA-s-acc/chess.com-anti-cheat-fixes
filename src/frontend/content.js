@@ -3,6 +3,7 @@ import StorageService from './services/StorageService.js';
 
 class ContentScript {
     constructor() {
+        console.log('[ContentScript] Starting initialization...');
         this.gameMonitor = null;
         this.urlObserver = null;
         this.initialize();
@@ -10,11 +11,13 @@ class ContentScript {
 
     async initialize() {
         try {
+            console.log('[ContentScript] Creating GameMonitor...');
             this.gameMonitor = new GameMonitor();
+            console.log('[ContentScript] GameMonitor created successfully');
             this.setupUrlObserver();
             this.setupReconnection();
         } catch (error) {
-            console.debug('Error initializing content script:', error);
+            console.error('[ContentScript] Error initializing content script:', error);
             this.cleanup();
         }
     }
