@@ -1,10 +1,12 @@
 import { RiskDisplay } from './RiskDisplay.js';
 import HistoryView from './HistoryView.js';
+import ReportsView from './ReportsView.js';
 
 class PopupManager {
     constructor() {
         this.display = new RiskDisplay();
         this.historyView = null;
+        this.reportsView = null;
         this.currentTab = 'current';
         this.port = null;
         this.setupConnection();
@@ -41,6 +43,15 @@ class PopupManager {
                 this.historyView = new HistoryView(historyContainer);
             }
             await this.historyView.render();
+        }
+
+        // Load reports view if switching to reports tab
+        if (tabName === 'reports') {
+            if (!this.reportsView) {
+                const reportsContainer = document.getElementById('reports-tab');
+                this.reportsView = new ReportsView(reportsContainer);
+            }
+            await this.reportsView.render();
         }
     }
 

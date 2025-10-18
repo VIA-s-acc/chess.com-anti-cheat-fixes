@@ -2,6 +2,7 @@ import { calculateRiskScoreFromUsername } from '../../src/risk-score.js';
 import { SETTINGS } from '../../src/config.js';
 import SettingsManager from './options/SettingsManager.js';
 import historyService from './services/HistoryService.js';
+import reportsService from './services/ReportsService.js';
 
 // Custom logging function to show logs in both console and service worker
 function log(level, ...args) {
@@ -333,3 +334,131 @@ async function handleGameStateChange(updateType, data) {
         log('error', 'Error handling game update:', error);
     }
 }
+
+// ============================================================================
+// REPORTS TRACKING & WEEKLY STATUS CHECKER
+// ============================================================================
+
+/**
+ * Setup weekly alarm for checking reported accounts
+ */
+async function setupWeeklyChecker() {
+    try {
+        // Create alarm that fires every week
+        await chrome.alarms.create('weeklyStatusCheck', {
+            periodInMinutes: 60 * 24 * 7 // 7 days
+        });
+
+        log('info', 'Weekly status checker alarm created');
+
+        // Also run an immediate check on startup if needed
+        const reports = await reportsService.getReportsNeedingCheck();
+        if (reports.length > 0) {
+            log('info', `Found ${reports.length} reports needing status check`);
+        }
+    } catch (error) {
+        log('error', 'Failed to setup weekly checker:', error);
+    }
+}
+
+/**
+ * Handle alarm events
+ */
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+    if (alarm.name === 'weeklyStatusCheck') {
+        log('info', 'Running weekly status check...');
+        await performWeeklyStatusCheck();
+    }
+});
+
+/**
+ * Perform weekly status check on all reports
+ */
+async function performWeeklyStatusCheck() {
+    try {
+        const reports = await reportsService.getReportsNeedingCheck();
+
+        if (reports.length === 0) {
+            log('info', 'No reports need status checking');
+            return;
+        }
+
+        log('info', `Checking status for ${reports.length} reports...`);
+
+        const results = await reportsService.batchCheckStatuses(
+            reports.map(r => r.id)
+        );
+
+        // Count results
+        const successful = results.filter(r => r.success).length;
+        const banned = results.filter(r => r.success && r.status === 'banned').length;
+        const notFound = results.filter(r => r.success && r.status === 'not_found').length;
+
+        log('info', `Status check complete: ${successful}/${results.length} successful`);
+        log('info', `Found ${banned} banned accounts, ${notFound} deleted accounts`);
+
+        // Send notification if any accounts were banned
+        if (banned > 0) {
+            await sendNotification(
+                'Reported Accounts Update',
+                `${banned} reported account${banned > 1 ? 's' : ''} detected as banned!`,
+                'banned'
+            );
+        }
+
+        // Store check results
+        await chrome.storage.local.set({
+            lastWeeklyCheck: {
+                timestamp: Date.now(),
+                checked: results.length,
+                banned,
+                notFound,
+                results
+            }
+        });
+
+    } catch (error) {
+        log('error', 'Error during weekly status check:', error);
+    }
+}
+
+/**
+ * Send browser notification
+ */
+async function sendNotification(title, message, type = 'info') {
+    try {
+        const iconUrl = chrome.runtime.getURL('icons/icon-128.png');
+
+        await chrome.notifications.create({
+            type: 'basic',
+            iconUrl: iconUrl,
+            title: title,
+            message: message,
+            priority: type === 'banned' ? 2 : 1
+        });
+    } catch (error) {
+        log('error', 'Failed to send notification:', error);
+    }
+}
+
+/**
+ * Manual trigger for status check (can be called from popup)
+ */
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === 'checkReportStatuses') {
+        performWeeklyStatusCheck()
+            .then(() => sendResponse({ success: true }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true; // Keep channel open for async response
+    }
+
+    if (message.action === 'addReport') {
+        reportsService.addReport(message.report)
+            .then(report => sendResponse({ success: true, report }))
+            .catch(error => sendResponse({ success: false, error: error.message }));
+        return true;
+    }
+});
+
+// Initialize weekly checker on extension load
+setupWeeklyChecker();

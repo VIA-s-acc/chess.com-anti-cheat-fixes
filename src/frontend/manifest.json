@@ -1,10 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Chess.com Opponent Risk Score",
-  "version": "1.2.0",
-  "description": "Calculate risk scores for Chess.com opponents with scoring history",
+  "version": "1.4.0",
+  "description": "Calculate risk scores for Chess.com opponents with scoring history and automated report tracking",
   "permissions": [
-    "storage"
+    "storage",
+    "alarms",
+    "notifications"
   ],
   "host_permissions": [
     "https://www.chess.com/*",
