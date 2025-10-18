@@ -3,9 +3,37 @@
  */
 
 const API_BASE_URL = 'https://api.chess.com/pub';
+const DEFAULT_TIMEOUT_MS = 10000; // 10 seconds default timeout
 
 import { GAME_RESULTS, SETTINGS } from './config.js';
 import SettingsManager from './frontend/options/SettingsManager.js';
+
+/**
+ * Fetch with timeout support
+ * @param {string} url - URL to fetch
+ * @param {Object} options - Fetch options
+ * @param {number} timeout - Timeout in milliseconds (default: 10000)
+ * @returns {Promise<Response>} Fetch response
+ */
+async function fetchWithTimeout(url, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
+
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        return response;
+    } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+            throw new Error(`Request timeout after ${timeout}ms`);
+        }
+        throw error;
+    }
+}
 
 /**
  * Fetch with retry and exponential backoff
@@ -17,10 +45,10 @@ import SettingsManager from './frontend/options/SettingsManager.js';
  */
 async function fetchWithRetry(url, options = {}, maxRetries = 3, baseDelay = 1000) {
     let lastError;
-    
+
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-            const response = await fetch(url, options);
+            const response = await fetchWithTimeout(url, options, DEFAULT_TIMEOUT_MS);
             
             // Only retry on server errors (5xx) or rate limits (429)
             if (response.status >= 500 || response.status === 429) {
@@ -47,15 +75,47 @@ async function fetchWithRetry(url, options = {}, maxRetries = 3, baseDelay = 100
 }
 
 /**
+ * Validate Chess.com username format
+ * @param {string} username - Username to validate
+ * @returns {boolean} Whether username is valid
+ */
+function isValidUsername(username) {
+    if (!username || typeof username !== 'string') return false;
+    if (username.length < 3 || username.length > 25) return false;
+    // Chess.com usernames: 3-25 chars, alphanumeric, hyphens, underscores
+    const usernameRegex = /^[a-zA-Z0-9][a-zA-Z0-9_-]{1,23}[a-zA-Z0-9]$/;
+    return usernameRegex.test(username);
+}
+
+/**
+ * Safe JSON parsing with error handling
+ * @param {Response} response - Fetch response
+ * @returns {Promise<Object>} Parsed JSON data
+ */
+async function safeJsonParse(response) {
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (error) {
+        console.error('Failed to parse JSON response:', text.substring(0, 200));
+        throw new Error('Invalid JSON response from API');
+    }
+}
+
+/**
  * Fetches player profile information
  * @param {string} username - Chess.com username
  * @returns {Promise<Object>} Player profile data
  */
 async function fetchPlayerProfile(username) {
+    if (!isValidUsername(username)) {
+        throw new Error(`Invalid username format: ${username}`);
+    }
+
     try {
         const response = await fetchWithRetry(`${API_BASE_URL}/player/${username}`);
         if (!response.ok) throw new Error('Failed to fetch player profile');
-        const data = await response.json();
+        const data = await safeJsonParse(response);
         
         if (!data || typeof data.joined !== 'number') {
             throw new Error('Invalid profile data structure');
@@ -76,10 +136,14 @@ async function fetchPlayerProfile(username) {
  * @returns {Promise<Object>} Player statistics
  */
 async function fetchPlayerStats(username) {
+    if (!isValidUsername(username)) {
+        throw new Error(`Invalid username format: ${username}`);
+    }
+
     try {
         const response = await fetchWithRetry(`${API_BASE_URL}/player/${username}/stats`);
         if (!response.ok) throw new Error('Failed to fetch player stats');
-        const data = await response.json();
+        const data = await safeJsonParse(response);
 
         const relevantFormats = ['chess_rapid', 'chess_bullet', 'chess_blitz'];
         const stats = {};
@@ -138,8 +202,11 @@ async function fetchRecentGames(username) {
 
         const gamesPromises = monthsToFetch.map(({ year, month }) =>
             fetchWithRetry(`${API_BASE_URL}/player/${username}/games/${year}/${month}`)
-                .then(response => response.json())
-                .catch(() => ({ games: [] }))
+                .then(response => safeJsonParse(response))
+                .catch((error) => {
+                    console.warn(`Failed to fetch games for ${year}/${month}:`, error.message);
+                    return { games: [] };
+                })
         );
 
         const responses = await Promise.all(gamesPromises);
@@ -179,6 +246,10 @@ async function fetchRecentGames(username) {
  * @returns {Promise<Object>} Combined player data
  */
 async function gatherPlayerData(username) {
+    if (!isValidUsername(username)) {
+        throw new Error(`Invalid username format: ${username}. Username must be 3-25 characters, alphanumeric with hyphens/underscores.`);
+    }
+
     try {
         const [profile, stats, recentGames] = await Promise.all([
             fetchPlayerProfile(username),

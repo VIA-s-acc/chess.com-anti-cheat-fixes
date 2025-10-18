@@ -6,6 +6,7 @@ import StorageService from '../services/StorageService.js';
 class GameMonitor {
     constructor() {
         this.observer = null;
+        this.urlObserver = null; // Track URL observer for cleanup
         this.currentState = {
             currentPlayer: null,
             opponentUsername: null,
@@ -14,9 +15,10 @@ class GameMonitor {
             lastCheck: 0,
             gameId: null
         };
-        
+
         this.debounceInterval = 2000;
-        
+        this.isDetectingOpponent = false; // Flag to prevent race conditions
+
         // Track current tab URL
         this.currentUrl = window.location.href;
 
@@ -25,18 +27,15 @@ class GameMonitor {
         this.loggedInUsername = notifRequest ? notifRequest.getAttribute('username') : null;
         console.debug('[GameMonitor] Logged in user:', this.loggedInUsername);
 
-        // Add URL change listener
-        this.setupUrlChangeListener();
-        
+        // Set up unified navigation listener (combines URL and history changes)
+        this.setupNavigationListener();
+
         // Wait for DOM to be ready
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.initialize());
         } else {
             this.initialize();
         }
-
-        // Listen for navigation events
-        this.setupNavigationListener();
     }
 
     // New helper to get username from player slot
@@ -158,19 +157,29 @@ class GameMonitor {
             // Wait a bit to ensure opponent is stable
             await new Promise(r => setTimeout(r, 500));
 
-            // Now detect opponent
-            let attempts = 5;
-            while (attempts > 0 && (!this.currentState.opponentUsername)) {
-                const currentTop = this.getTopUsername();
-                if (this.isValidUsername(currentTop) && currentTop !== this.currentState.currentPlayer) {
-                    this.currentState.opponentUsername = currentTop;
-                    console.debug('[GameMonitor] Opponent detected:', currentTop);
-                } else {
-                    console.debug('[GameMonitor] Opponent not ready or invalid, retrying...');
-                    await this.notifyStateChange('opponent_pending', { partial: true });
-                    await new Promise(r => setTimeout(r, 500));
+            // Now detect opponent - prevent race conditions
+            if (this.isDetectingOpponent) {
+                console.debug('[GameMonitor] Opponent detection already in progress, skipping duplicate attempt');
+                return;
+            }
+
+            this.isDetectingOpponent = true;
+            try {
+                let attempts = 5;
+                while (attempts > 0 && (!this.currentState.opponentUsername)) {
+                    const currentTop = this.getTopUsername();
+                    if (this.isValidUsername(currentTop) && currentTop !== this.currentState.currentPlayer) {
+                        this.currentState.opponentUsername = currentTop;
+                        console.debug('[GameMonitor] Opponent detected:', currentTop);
+                    } else {
+                        console.debug('[GameMonitor] Opponent not ready or invalid, retrying...');
+                        await this.notifyStateChange('opponent_pending', { partial: true });
+                        await new Promise(r => setTimeout(r, 500));
+                    }
+                    attempts--;
                 }
-                attempts--;
+            } finally {
+                this.isDetectingOpponent = false;
             }
 
             if (!this.currentState.opponentUsername) {
@@ -261,39 +270,16 @@ class GameMonitor {
             this.observer.disconnect();
             this.observer = null;
         }
+        if (this.urlObserver) {
+            this.urlObserver.disconnect();
+            this.urlObserver = null;
+        }
     }
 
     getGameIdFromUrl() {
         const baseUrl = window.location.href.split('?')[0];
         const match = baseUrl.match(/^https:\/\/www\.chess\.com\/game\/live\/(\d+)/);
         return match ? match[1] : null;
-    }
-
-    setupUrlChangeListener() {
-        let lastUrl = this.currentUrl;
-        const urlObserver = new MutationObserver(() => {
-            if (window.location.href !== lastUrl) {
-                console.debug('URL changed from', lastUrl, 'to', window.location.href);
-                lastUrl = window.location.href;
-                
-                const currentGameId = this.getGameIdFromUrl();
-                if (this.currentState.gameId && !currentGameId) {
-                    this.notifyStateChange('game_left');
-                    this.currentState = {
-                        gameId: null,
-                        currentPlayer: null,
-                        opponentUsername: null,
-                        moveList: [],
-                        isGameAborted: false
-                    };
-                }
-            }
-        });
-
-        urlObserver.observe(document, {
-            subtree: true,
-            childList: true
-        });
     }
 
     setupObserver() {
@@ -366,19 +352,28 @@ class GameMonitor {
     }
 
     setupNavigationListener() {
+        // Prevent duplicate setup
+        if (this.urlObserver) {
+            console.debug('[GameMonitor] Navigation listener already set up');
+            return;
+        }
+
+        // Listen for browser back/forward
         window.addEventListener('popstate', () => this.handleUrlChange());
-        
-        const urlObserver = new MutationObserver(() => {
+
+        // Monitor DOM changes that might indicate URL changes
+        this.urlObserver = new MutationObserver(() => {
             if (window.location.href !== this.currentUrl) {
                 this.handleUrlChange();
             }
         });
 
-        urlObserver.observe(document, {
+        this.urlObserver.observe(document, {
             subtree: true,
             childList: true
         });
 
+        // Intercept pushState and replaceState to detect SPA navigation
         const originalPushState = history.pushState;
         const originalReplaceState = history.replaceState;
 

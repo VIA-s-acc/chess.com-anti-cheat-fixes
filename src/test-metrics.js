@@ -103,8 +103,8 @@ async function testMetrics(username, debug = false) {
         playerData.username = username;
 
         // Calculate metrics
-        const metrics = calculatePlayerMetrics(playerData);
-        
+        const metrics = await calculatePlayerMetrics(playerData);
+
         // Validate metrics
         const isValid = validateMetrics(metrics);
         if (!isValid) {

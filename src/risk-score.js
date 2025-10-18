@@ -198,7 +198,7 @@ function calculateFormatRiskScore(formatMetrics, debug = false) {
     );
 
     const accuracyResult = calculateHighAccuracyScore(accuracy, currentRating);
-    const highAccuracyScore = debug ? accuracyResult.score : accuracyResult;
+    const highAccuracyScore = accuracyResult.score;
 
     // Calculate weighted sum of sub-scores
     const weightedSum = (
@@ -207,11 +207,10 @@ function calculateFormatRiskScore(formatMetrics, debug = false) {
         WEIGHTS.HIGH_ACCURACY * highAccuracyScore
     );
 
-    if (!debug) return weightedSum;
-
+    // Always return an object with score and optional debug info
     return {
         score: weightedSum,
-        debug: {
+        debug: debug ? {
             overallWinRate: {
                 raw: overallWinrate,
                 score: overallWinRateScore,
@@ -237,7 +236,7 @@ function calculateFormatRiskScore(formatMetrics, debug = false) {
                 playerRating: currentRating
             },
             weightedSum
-        }
+        } : null
     };
 }
 
@@ -263,7 +262,7 @@ export function calculateRiskScore(metrics, debug = false) {
         if (formatMetrics.recentGames.total < THRESHOLDS.MIN_GAMES) continue;
 
         const result = calculateFormatRiskScore(formatMetrics, debug);
-        const rawScore = debug ? result.score : result;
+        const rawScore = result.score;
         const finalFormatScore = Math.min(100, accountAgeFactor * rawScore);
         
         formatScores.push({
