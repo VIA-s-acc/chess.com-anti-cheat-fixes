@@ -21,19 +21,20 @@ const filesToCopy = [
     {
         from: 'src/frontend/options/options.css',
         to: 'dist/options/options.css'
-    },
-    {
-        from: 'store-assets/icons/icon-16.png',
-        to: 'dist/icons/icon-16.png'
-    },
-    {
-        from: 'store-assets/icons/icon-48.png',
-        to: 'dist/icons/icon-48.png'
-    },
-    {
-        from: 'store-assets/icons/icon-128.png',
-        to: 'dist/icons/icon-128.png'
     }
+    // Icons will be added later - store-assets directory doesn't exist yet
+    // {
+    //     from: 'store-assets/icons/icon-16.png',
+    //     to: 'dist/icons/icon-16.png'
+    // },
+    // {
+    //     from: 'store-assets/icons/icon-48.png',
+    //     to: 'dist/icons/icon-48.png'
+    // },
+    // {
+    //     from: 'store-assets/icons/icon-128.png',
+    //     to: 'dist/icons/icon-128.png'
+    // }
 ];
 
 async function copyFiles() {

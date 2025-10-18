@@ -4,10 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "clean": "rm -rf dist/",
-    "js": "./node_modules/.bin/esbuild src/frontend/{background,content,popup/popup,popup/RiskDisplay,options/options}.js --bundle --outdir=dist --format=iife --platform=browser --external:chrome",
+    "clean": "node -e \"require('fs').rmSync('dist', {recursive: true, force: true})\"",
+    "mkdir": "node -e \"require('fs').mkdirSync('dist/popup', {recursive: true})\"",
+    "copy-css": "node -e \"require('fs').copyFileSync('src/frontend/popup/styles.css', 'dist/popup/styles.css')\"",
+    "js": "node node_modules/esbuild/bin/esbuild src/frontend/background.js src/frontend/content.js src/frontend/popup/popup.js src/frontend/popup/RiskDisplay.js src/frontend/options/options.js --bundle --outdir=dist --format=iife --platform=browser --external:chrome",
     "copy": "node scripts/copy-static.js",
-    "build": "npm run clean && mkdir -p dist/popup && cp src/frontend/popup/styles.css dist/popup/ && npm run js && npm run copy",
+    "build": "npm run clean && npm run mkdir && npm run copy-css && npm run js && npm run copy",
     "test-risk": "node src/test-risk-score.js"
   },
   "devDependencies": {
