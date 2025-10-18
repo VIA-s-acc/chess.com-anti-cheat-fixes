@@ -1,11 +1,47 @@
 import { RiskDisplay } from './RiskDisplay.js';
+import HistoryView from './HistoryView.js';
 
 class PopupManager {
     constructor() {
         this.display = new RiskDisplay();
+        this.historyView = null;
+        this.currentTab = 'current';
         this.port = null;
         this.setupConnection();
+        this.setupTabs();
         this.display.showLoading();
+    }
+
+    setupTabs() {
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        tabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.getAttribute('data-tab');
+                this.switchTab(tabName);
+            });
+        });
+    }
+
+    async switchTab(tabName) {
+        // Update active states
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
+        });
+
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.toggle('active', content.id === `${tabName}-tab`);
+        });
+
+        this.currentTab = tabName;
+
+        // Load history view if switching to history tab
+        if (tabName === 'history') {
+            if (!this.historyView) {
+                const historyContainer = document.getElementById('history-tab');
+                this.historyView = new HistoryView(historyContainer);
+            }
+            await this.historyView.render();
+        }
     }
 
     setupConnection() {

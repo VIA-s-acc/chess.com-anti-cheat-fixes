@@ -13,7 +13,14 @@
             <a href="#" id="settings-link" class="settings-icon">⚙️</a>
         </div>
 
-        <!-- Risk Score Section -->
+        <!-- Tab Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="current">Current</button>
+            <button class="tab-btn" data-tab="history">History</button>
+        </div>
+
+        <!-- Current Tab (Risk Score Section) -->
+        <div id="current-tab" class="tab-content active">
         <div class="risk-score-section">
             <div class="max-score-display">
                 <svg class="score-circle" viewBox="0 0 100 100">
@@ -52,6 +59,14 @@
                 <!-- Factors will be inserted here -->
             </div>
         </div>
+        </div>
+        <!-- End Current Tab -->
+
+        <!-- History Tab -->
+        <div id="history-tab" class="tab-content">
+            <!-- History view will be rendered here by HistoryView.js -->
+        </div>
+        <!-- End History Tab -->
     </div>
     <script src="./popup.js" type="module"></script>
 </body>
