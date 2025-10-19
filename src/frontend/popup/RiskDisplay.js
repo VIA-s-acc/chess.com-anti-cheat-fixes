@@ -167,6 +167,16 @@ export class RiskDisplay {
     updateFactors(factors, otherFormats) {
         const sections = [];
 
+        // Add Report button at the top
+        const reportButton = `
+            <div class="report-action" style="margin-bottom: 12px;">
+                <button id="report-user-btn" class="action-btn" style="width: 100%;">
+                    📋 Report User
+                </button>
+            </div>
+        `;
+        sections.push(reportButton);
+
         // Helper for factor formatting
         const formatFactor = (title, raw, weighted, games = null) => `
             <div class="factor-item">
@@ -265,6 +275,73 @@ export class RiskDisplay {
         }
 
         this.factors.innerHTML = sections.join('');
+
+        // Attach event listener to report button
+        this.attachReportButton();
+    }
+
+    /**
+     * Attach event listener to the report button
+     */
+    attachReportButton() {
+        const reportBtn = document.getElementById('report-user-btn');
+        if (reportBtn && this.lastValidScore) {
+            reportBtn.addEventListener('click', async () => {
+                await this.reportUser(this.lastValidScore);
+            });
+        }
+    }
+
+    /**
+     * Report user to the tracking system
+     */
+    async reportUser(riskData) {
+        try {
+            const reportBtn = document.getElementById('report-user-btn');
+            if (reportBtn) {
+                reportBtn.disabled = true;
+                reportBtn.textContent = '⏳ Reporting...';
+            }
+
+            const report = {
+                username: riskData.opponentUsername,
+                riskScore: Math.round(riskData.maxScore.value || 0),
+                gameId: 'unknown', // We don't have gameId in RiskDisplay
+                reason: `High risk detected (${Math.round(riskData.maxScore.value)}%)`,
+                playerStats: {
+                    rating: riskData.maxScore.factors?.accuracy?.playerRating || null,
+                    winRate: riskData.maxScore.factors?.overallWinRate?.raw || null,
+                    accuracy: riskData.maxScore.factors?.accuracy?.raw || null
+                }
+            };
+
+            const response = await chrome.runtime.sendMessage({
+                action: 'addReport',
+                report
+            });
+
+            if (response.success) {
+                if (reportBtn) {
+                    reportBtn.textContent = '✅ Reported';
+                    setTimeout(() => {
+                        reportBtn.textContent = '📋 Report User';
+                        reportBtn.disabled = false;
+                    }, 2000);
+                }
+            } else {
+                throw new Error(response.error || 'Failed to add report');
+            }
+        } catch (error) {
+            console.error('Failed to report user:', error);
+            const reportBtn = document.getElementById('report-user-btn');
+            if (reportBtn) {
+                reportBtn.textContent = '❌ Failed';
+                setTimeout(() => {
+                    reportBtn.textContent = '📋 Report User';
+                    reportBtn.disabled = false;
+                }, 2000);
+            }
+        }
     }
 
     /**
