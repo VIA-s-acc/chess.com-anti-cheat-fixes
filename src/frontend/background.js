@@ -121,11 +121,25 @@ chrome.runtime.onInstalled.addListener(() => {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     try {
         log('debug', 'Received message:', request);
-        
+
         if (request.action === 'gameStateChanged') {
             handleGameStateChange(request.updateType, request.data);
             sendResponse({ success: true });
             return true;
+        }
+
+        if (request.action === 'addReport') {
+            reportsService.addReport(request.report)
+                .then(report => sendResponse({ success: true, report }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+            return true; // Keep channel open for async response
+        }
+
+        if (request.action === 'checkReportStatuses') {
+            performWeeklyStatusCheck()
+                .then(() => sendResponse({ success: true }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+            return true; // Keep channel open for async response
         }
 
         log('warn', 'Unknown action received:', request.action);
@@ -440,25 +454,6 @@ async function sendNotification(title, message, type = 'info') {
         log('error', 'Failed to send notification:', error);
     }
 }
-
-/**
- * Manual trigger for status check (can be called from popup)
- */
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.action === 'checkReportStatuses') {
-        performWeeklyStatusCheck()
-            .then(() => sendResponse({ success: true }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
-        return true; // Keep channel open for async response
-    }
-
-    if (message.action === 'addReport') {
-        reportsService.addReport(message.report)
-            .then(report => sendResponse({ success: true, report }))
-            .catch(error => sendResponse({ success: false, error: error.message }));
-        return true;
-    }
-});
 
 // Initialize weekly checker on extension load
 setupWeeklyChecker();
