@@ -1,17 +1,31 @@
 import { RiskDisplay } from './RiskDisplay.js';
 import HistoryView from './HistoryView.js';
 import ReportsView from './ReportsView.js';
+import AbortStatus from './AbortStatus.js';
 
 class PopupManager {
     constructor() {
         this.display = new RiskDisplay();
         this.historyView = null;
         this.reportsView = null;
+        this.abortStatus = new AbortStatus('abort-status-container');
         this.currentTab = 'current';
         this.port = null;
         this.setupConnection();
         this.setupTabs();
         this.display.showLoading();
+        this.loadAbortStatus();
+    }
+
+    async loadAbortStatus() {
+        try {
+            const response = await chrome.runtime.sendMessage({ action: 'getAbortStatus' });
+            if (response.success) {
+                await this.abortStatus.update(response.status);
+            }
+        } catch (error) {
+            console.error('Failed to load abort status:', error);
+        }
     }
 
     setupTabs() {
@@ -114,7 +128,13 @@ class PopupManager {
                 case 'clearDisplay':
                     this.display.showInfo('No active game detected', 'Open a live Chess.com game to analyze your opponent');
                     break;
-                    
+
+                case 'abortStatusUpdate':
+                    if (message.status && this.abortStatus) {
+                        await this.abortStatus.update(message.status);
+                    }
+                    break;
+
                 default:
                     console.warn('Unknown message action:', message.action);
             }

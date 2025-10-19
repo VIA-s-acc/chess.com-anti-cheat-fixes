@@ -30,6 +30,15 @@ A Chrome extension that helps detect potential cheaters on Chess.com by calculat
 - **Encounter Tracking:** See how many times you've faced the same opponent
 - **Status History:** Complete audit trail of account status changes
 
+### Enhanced Features (v1.6.0+)
+
+- **Abort Counter:** Real-time tracking of game aborts
+- **Cooldown Detection:** Automatic detection of abort cooldown periods
+- **Proactive Warnings:** Alerts before you hit the abort limit
+- **STOP PLAYING Alerts:** Critical warnings during cooldown to avoid cheaters
+- **Live Countdown:** Real-time timer showing cooldown remaining
+- **Smart Recommendations:** Context-aware advice based on abort status
+
 ## Installation
 
 Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/chesscom-opponent-risk-sc/oiemcgpbdohnhkplobgndgdhdlbafoeg).
@@ -84,6 +93,40 @@ export const SETTINGS = {
 ```
 
 ## Changelog
+
+### v1.6.0-beta (2025-10-19)
+
+#### Abort Counter & Cooldown Tracker
+
+- **AbortTrackerService:** Smart abort monitoring system
+  - Track all game aborts automatically
+  - Rolling 1-hour window for abort counting
+  - Limit detection (~10 aborts before cooldown)
+  - 15-minute cooldown tracking
+  - Abort history with opponent names and timestamps
+
+- **Cooldown Prevention:** Proactive warnings to avoid lockout
+  - Warning at 8/10 aborts used
+  - Critical alert when limit reached
+  - Real-time cooldown countdown timer
+  - Browser notifications for warnings
+  - "STOP PLAYING" alerts during cooldown
+
+- **Abort Status UI:** Visual abort counter in popup
+  - Color-coded status (green/yellow/red)
+  - Progress bar showing aborts used
+  - Live countdown during cooldown period
+  - Recommendations based on current status
+  - Abort history viewer
+  - Reset function for testing
+
+- **Smart Prevention Logic:**
+  - Warns before you hit the limit
+  - Prevents playing during cooldown (can't abort cheaters!)
+  - Shows exact time remaining in cooldown
+  - Tracks total aborts and cooldown events
+
+**Why this matters:** During cooldown, you cannot abort games. If you face a cheater, you'll be forced to play or resign. This feature helps you avoid that situation.
 
 ### v1.4.0-beta (2025-10-19)
 

@@ -3,6 +3,7 @@ import { SETTINGS } from '../../src/config.js';
 import SettingsManager from './options/SettingsManager.js';
 import historyService from './services/HistoryService.js';
 import reportsService from './services/ReportsService.js';
+import abortTrackerService from './services/AbortTrackerService.js';
 
 // Custom logging function to show logs in both console and service worker
 function log(level, ...args) {
@@ -140,6 +141,27 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 .then(() => sendResponse({ success: true }))
                 .catch(error => sendResponse({ success: false, error: error.message }));
             return true; // Keep channel open for async response
+        }
+
+        if (request.action === 'getAbortStatus') {
+            abortTrackerService.getStatus()
+                .then(status => sendResponse({ success: true, status }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+            return true;
+        }
+
+        if (request.action === 'getAbortHistory') {
+            abortTrackerService.getAbortHistory(request.limit || 20)
+                .then(history => sendResponse({ success: true, history }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+            return true;
+        }
+
+        if (request.action === 'resetAbortTracker') {
+            abortTrackerService.reset()
+                .then(() => sendResponse({ success: true }))
+                .catch(error => sendResponse({ success: false, error: error.message }));
+            return true;
         }
 
         log('warn', 'Unknown action received:', request.action);
@@ -339,6 +361,47 @@ async function handleGameStateChange(updateType, data) {
                 currentGameState.isGameAborted = true;
                 currentGameState.timestamp = data.timestamp;
                 log('info', 'Game aborted');
+
+                // Track abort and check for cooldown
+                try {
+                    const abortResult = await abortTrackerService.recordAbort({
+                        gameId: currentGameState.gameId || data.gameId,
+                        opponentUsername: currentGameState.opponentUsername,
+                        moveCount: currentGameState.moveList?.length || 0,
+                        reason: 'User aborted game'
+                    });
+
+                    log('info', `Abort recorded: ${abortResult.abortCount}/${10} used`);
+
+                    // Send notification if warning threshold reached
+                    if (abortResult.shouldWarn && !abortResult.isInCooldown) {
+                        await sendNotification(
+                            'Abort Limit Warning',
+                            `You have used ${abortResult.abortCount}/10 aborts. ${10 - abortResult.abortCount} remaining before cooldown!`,
+                            'warning'
+                        );
+                    }
+
+                    // Send critical notification if in cooldown
+                    if (abortResult.isInCooldown) {
+                        await sendNotification(
+                            '🛑 Abort Cooldown Active!',
+                            'STOP PLAYING! You cannot abort games for ~15 minutes. Avoid facing cheaters you can\'t abort!',
+                            'danger'
+                        );
+                    }
+
+                    // Update popup if connected
+                    if (popupPort) {
+                        const status = await abortTrackerService.getStatus();
+                        popupPort.postMessage({
+                            action: 'abortStatusUpdate',
+                            status
+                        });
+                    }
+                } catch (error) {
+                    log('error', 'Failed to record abort:', error);
+                }
                 break;
 
             default:
