@@ -167,15 +167,24 @@ export class RiskDisplay {
     updateFactors(factors, otherFormats) {
         const sections = [];
 
-        // Add Report button at the top
-        const reportButton = `
-            <div class="report-action" style="margin-bottom: 12px;">
-                <button id="report-user-btn" class="action-btn" style="width: 100%;">
+        // Calculate overall risk score for action buttons
+        const overallScore = this.lastValidScore?.maxScore?.value || 0;
+        const isHighRisk = overallScore >= 60; // High or Critical risk
+
+        // Add action buttons at the top
+        const actionButtons = `
+            <div class="action-buttons" style="margin-bottom: 12px; display: flex; gap: 6px;">
+                ${isHighRisk ? `
+                    <button id="abort-game-btn" class="action-btn abort-btn" style="flex: 1; background-color: rgba(239, 68, 68, 0.2); border-color: #ef4444; color: #ef4444;">
+                        ⛔ Abort Game
+                    </button>
+                ` : ''}
+                <button id="report-user-btn" class="action-btn" style="flex: 1;">
                     📋 Report User
                 </button>
             </div>
         `;
-        sections.push(reportButton);
+        sections.push(actionButtons);
 
         // Helper for factor formatting
         const formatFactor = (title, raw, weighted, games = null) => `
@@ -276,19 +285,50 @@ export class RiskDisplay {
 
         this.factors.innerHTML = sections.join('');
 
-        // Attach event listener to report button
-        this.attachReportButton();
+        // Attach event listeners to action buttons
+        this.attachActionButtons();
     }
 
     /**
-     * Attach event listener to the report button
+     * Attach event listeners to action buttons
      */
-    attachReportButton() {
+    attachActionButtons() {
+        // Abort button
+        const abortBtn = document.getElementById('abort-game-btn');
+        if (abortBtn) {
+            abortBtn.addEventListener('click', () => {
+                this.abortGame();
+            });
+        }
+
+        // Report button
         const reportBtn = document.getElementById('report-user-btn');
         if (reportBtn && this.lastValidScore) {
             reportBtn.addEventListener('click', async () => {
                 await this.reportUser(this.lastValidScore);
             });
+        }
+    }
+
+    /**
+     * Abort the current game
+     */
+    abortGame() {
+        const confirmed = confirm(
+            '⛔ Abort this game?\n\n' +
+            'This will count toward your abort limit.\n\n' +
+            'Note: You can only abort games with less than 2 moves.'
+        );
+
+        if (confirmed) {
+            // Inform user to use Chess.com's abort button
+            alert(
+                '📌 To abort the game:\n\n' +
+                '1. Go to the Chess.com game tab\n' +
+                '2. Click the "Abort" button on the game board\n' +
+                '3. The abort will be tracked automatically\n\n' +
+                'This extension cannot abort games directly for security reasons.'
+            );
         }
     }
 
