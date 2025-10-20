@@ -1,13 +1,16 @@
 import SettingsManager from './SettingsManager.js';
 import ThresholdSettingsService from '../services/ThresholdSettingsService.js';
+import GlobalDatabaseService from '../services/GlobalDatabaseService.js';
 
 class OptionsManager {
     constructor() {
         this.settingsManager = SettingsManager;
         this.thresholdService = ThresholdSettingsService;
+        this.globalDbService = GlobalDatabaseService;
         this.setupEventListeners();
         this.loadSettings();
         this.loadThresholds();
+        this.loadGlobalDbSettings();
     }
 
     async loadSettings() {
@@ -58,28 +61,6 @@ class OptionsManager {
         } catch (error) {
             this.showError('Failed to load thresholds');
             console.error('Error loading thresholds:', error);
-        }
-    }
-
-    async saveSettings() {
-        try {
-            // Save general settings
-            const settings = {
-                SETTINGS: {
-                    RATED_ONLY: document.getElementById('RATED_ONLY').checked,
-                    AUTO_OPEN_POPUP: document.getElementById('AUTO_OPEN_POPUP').checked
-                }
-            };
-
-            await this.settingsManager.saveSettings(settings);
-
-            // Save thresholds
-            await this.saveThresholds();
-
-            this.showSuccess('All settings saved successfully');
-        } catch (error) {
-            this.showError('Failed to save settings: ' + error.message);
-            console.error('Error saving settings:', error);
         }
     }
 
@@ -273,7 +254,187 @@ class OptionsManager {
         document.getElementById('reset-thresholds-btn').addEventListener('click', () => {
             this.resetThresholds();
         });
+
+        // Global Database listeners
+        document.getElementById('test-connection-btn').addEventListener('click', () => {
+            this.testConnection();
+        });
+
+        document.getElementById('global-db-url').addEventListener('change', (e) => {
+            // Auto-trim whitespace
+            e.target.value = e.target.value.trim();
+        });
     }
+
+    // ========================================
+    // Global Database Methods
+    // ========================================
+
+    async loadGlobalDbSettings() {
+        try {
+            // Wait for config to load
+            await this.globalDbService.loadConfig();
+
+            const status = this.globalDbService.getStatus();
+
+            // Load settings
+            document.getElementById('GLOBAL_DB_ENABLED').checked = status.enabled;
+            document.getElementById('global-db-url').value = status.serverUrl || 'http://localhost:8000';
+
+            // Update status display
+            this.updateConnectionStatus(status.isAvailable);
+
+            console.log('[Options] Global DB settings loaded:', status);
+        } catch (error) {
+            this.showError('Failed to load global database settings');
+            console.error('Error loading global DB settings:', error);
+        }
+    }
+
+    async saveGlobalDbSettings() {
+        try {
+            const enabled = document.getElementById('GLOBAL_DB_ENABLED').checked;
+            const serverUrl = document.getElementById('global-db-url').value.trim();
+
+            // Validate URL
+            if (enabled && !serverUrl) {
+                throw new Error('Server URL is required when global database is enabled');
+            }
+
+            // Save config
+            await this.globalDbService.saveConfig({
+                enabled,
+                serverUrl
+            });
+
+            // Update status display
+            if (!enabled) {
+                this.updateConnectionStatus(false, 'disabled');
+            }
+
+            console.log('[Options] Global DB settings saved');
+        } catch (error) {
+            this.showError('Failed to save global database settings: ' + error.message);
+            console.error('Error saving global DB settings:', error);
+            throw error;
+        }
+    }
+
+    async testConnection() {
+        try {
+            const testBtn = document.getElementById('test-connection-btn');
+            const originalText = testBtn.textContent;
+
+            // Show checking state
+            testBtn.textContent = '⏳ Checking...';
+            testBtn.disabled = true;
+            this.updateConnectionStatus(null, 'checking');
+
+            // Temporarily save current URL to test
+            const serverUrl = document.getElementById('global-db-url').value.trim();
+            if (!serverUrl) {
+                throw new Error('Please enter a server URL');
+            }
+
+            await this.globalDbService.saveConfig({
+                enabled: document.getElementById('GLOBAL_DB_ENABLED').checked,
+                serverUrl
+            });
+
+            // Test connection
+            const result = await this.globalDbService.checkHealth();
+
+            // Update UI
+            if (result.available) {
+                this.updateConnectionStatus(true, 'connected', result.data);
+                this.showSuccess('Connection successful!');
+            } else {
+                this.updateConnectionStatus(false, 'failed', null, result.reason);
+                this.showError(`Connection failed: ${result.reason}`);
+            }
+
+            // Restore button
+            testBtn.textContent = originalText;
+            testBtn.disabled = false;
+
+        } catch (error) {
+            this.updateConnectionStatus(false, 'error', null, error.message);
+            this.showError('Connection test failed: ' + error.message);
+            console.error('Connection test error:', error);
+
+            // Restore button
+            const testBtn = document.getElementById('test-connection-btn');
+            testBtn.textContent = '🔍 Test Connection';
+            testBtn.disabled = false;
+        }
+    }
+
+    updateConnectionStatus(isConnected, state = null, serverData = null, errorMessage = null) {
+        const indicator = document.getElementById('status-indicator');
+        const statusText = document.getElementById('status-text');
+        const serverInfoContainer = document.getElementById('server-info-container');
+
+        // Remove all status classes
+        indicator.classList.remove('connected', 'disconnected', 'checking');
+
+        if (state === 'checking') {
+            indicator.classList.add('checking');
+            statusText.textContent = 'Checking connection...';
+            serverInfoContainer.style.display = 'none';
+        } else if (state === 'disabled') {
+            statusText.textContent = 'Disabled';
+            serverInfoContainer.style.display = 'none';
+        } else if (isConnected) {
+            indicator.classList.add('connected');
+            statusText.textContent = 'Connected ✓';
+
+            // Show server info if available
+            if (serverData) {
+                serverInfoContainer.style.display = 'block';
+                document.getElementById('server-status-value').textContent = serverData.status;
+                document.getElementById('server-version-value').textContent = serverData.version;
+                document.getElementById('server-reports-value').textContent = serverData.total_reports;
+                document.getElementById('server-uptime-value').textContent = serverData.uptime;
+            }
+        } else {
+            indicator.classList.add('disconnected');
+            statusText.textContent = `Disconnected ${errorMessage ? '(' + errorMessage + ')' : '✗'}`;
+            serverInfoContainer.style.display = 'none';
+        }
+    }
+
+    // ========================================
+    // Overridden Save Method
+    // ========================================
+
+    async saveSettings() {
+        try {
+            // Save general settings
+            const settings = {
+                SETTINGS: {
+                    RATED_ONLY: document.getElementById('RATED_ONLY').checked,
+                    AUTO_OPEN_POPUP: document.getElementById('AUTO_OPEN_POPUP').checked
+                }
+            };
+
+            await this.settingsManager.saveSettings(settings);
+
+            // Save thresholds
+            await this.saveThresholds();
+
+            // Save global DB settings
+            await this.saveGlobalDbSettings();
+
+            this.showSuccess('All settings saved successfully');
+        } catch (error) {
+            this.showError('Failed to save settings: ' + error.message);
+            console.error('Error saving settings:', error);
+        }
+    }
+
+    // ========================================
+    // Existing Methods
+    // ========================================
 
     showError(message) {
         this.showMessage(message, 'error');
@@ -284,10 +445,11 @@ class OptionsManager {
     }
 
     showMessage(message, type) {
-        // Remove existing message
+        // Remove existing message with fade-out
         const existing = document.querySelector('.message');
         if (existing) {
-            existing.remove();
+            existing.classList.add('fade-out');
+            setTimeout(() => existing.remove(), 300);
         }
 
         // Create new message
@@ -299,10 +461,11 @@ class OptionsManager {
         const container = document.querySelector('.options-container');
         container.insertBefore(messageDiv, container.firstChild);
 
-        // Auto-remove after 5 seconds
+        // Auto-remove after 4 seconds with fade-out animation
         setTimeout(() => {
-            messageDiv.remove();
-        }, 5000);
+            messageDiv.classList.add('fade-out');
+            setTimeout(() => messageDiv.remove(), 300);
+        }, 4000);
     }
 }
 

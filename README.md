@@ -49,6 +49,28 @@ A Chrome extension that helps detect potential cheaters on Chess.com by calculat
 - **Import/Export Configs:** Share and backup your custom settings as JSON
 - **Real-Time UI Updates:** Colors and warnings adapt to your thresholds instantly
 
+### NEW! Enhanced Features (v2.0.0 - Major Release)
+
+- **📊 Statistics Dashboard:** Personal analytics tracking
+  - Games analyzed counter with time-based filters (24h/7d/30d/all)
+  - Suspicious players encountered metrics
+  - Abort effectiveness percentage calculator
+  - Win rate vs suspicious opponents tracker
+  - Risk distribution visualization with animated bars
+  - Game format breakdown (Bullet/Blitz/Rapid)
+  - Suspicious players rate percentage
+  - Top-10 most suspicious encountered players list
+  - Export/import statistics as JSON
+
+- **🌐 Global Cheater Database (Optional):**
+  - Local Python server for crowdsourced data sharing
+  - Anonymous report submission system
+  - Player reputation lookup with confidence levels
+  - Real-time health check and server status
+  - Configurable server URL in extension options
+  - Report aggregation with confidence ratings (low/medium/high/confirmed)
+  - Privacy-focused: only usernames, risk scores, and formats shared
+
 ## Installation
 
 Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/chesscom-opponent-risk-sc/oiemcgpbdohnhkplobgndgdhdlbafoeg).
@@ -121,7 +143,78 @@ Customize detection sensitivity in the options page:
 - Import shared configurations from other users
 - Backup and restore your custom settings
 
+### Global Cheater Database Setup (v2.0.0+)
+
+The Global Database is **optional** and runs locally on your machine:
+
+**Quick Start:**
+1. Navigate to `server/` directory
+2. Run `run.bat` (Windows) or see [QUICK_START.md](QUICK_START.md) for other platforms
+3. Open extension Options → Global Cheater Database
+4. Enable database and click "Test Connection"
+5. Server runs on `http://localhost:8000` by default
+
+**Features:**
+- Anonymous crowdsourced data sharing
+- Real-time player reputation lookups
+- Confidence ratings based on multiple reports
+- Full API documentation at `http://localhost:8000/docs`
+
+For detailed setup instructions, see [QUICK_START.md](QUICK_START.md) and [server/README.md](server/README.md).
+
 ## Changelog
+
+### v2.0.0 - Major Release (2025-10-20)
+
+**🎉 Major Features:**
+
+**📊 Statistics Dashboard:**
+- Personal analytics tracking with time-based filters (24h/7d/30d/all-time)
+- Games analyzed counter and suspicious encounters tracker
+- Abort effectiveness calculator (% of successful aborts vs losses)
+- Win rate vs suspicious opponents
+- Risk distribution visualization with animated horizontal bars
+- Game format breakdown (Bullet/Blitz/Rapid) with suspicious player counts
+- Top-10 most suspicious players list with encounter counts and average risk scores
+- Export/import statistics as JSON
+- New Statistics tab in popup UI
+
+**🌐 Global Cheater Database:**
+- Optional local Python FastAPI server for crowdsourced intelligence
+- Automatic report submission to global database when enabled
+- Anonymous reporting with SHA256 hashed reporter IDs
+- Player reputation lookup with confidence levels:
+  - **Confirmed:** 10+ reports, 80%+ avg risk
+  - **High:** 5+ reports, 70%+ avg risk
+  - **Medium:** 3+ reports, 60%+ avg risk
+  - **Low:** < 3 reports or lower risk
+- Real-time health check and server status monitoring
+- Configurable server URL in options page
+- Full REST API with Swagger documentation at `/docs`
+- Privacy-focused: only usernames, risk scores, and formats shared
+
+**✨ UI/UX Improvements:**
+- Animated slide-in/fade-out notifications for settings changes
+- Success (✓) and error (✕) icons in notifications
+- Compact tab navigation for better space usage
+- Improved overflow handling in Statistics view
+- Vertical layout for Global DB status to prevent text overflow
+
+**Technical Improvements:**
+- New services: `StatisticsService`, `GlobalDatabaseService`
+- New components: `StatisticsView`
+- Integrated Global Database with `ReportsService`
+- Server API endpoints: health, submit report, player reputation, search, statistics
+- File-based storage with JSON (upgradeable to PostgreSQL)
+- Time-based filtering for statistics
+- Confidence level calculation algorithm
+
+**Bug Fixes:**
+- Fixed `getStatistics()` to accept `timeFilter` parameter
+- Fixed singleton service initialization in `StatisticsView`
+- Fixed Global Database settings save/load
+- Fixed horizontal overflow in Statistics tab
+- Fixed tab navigation to fit all 4 tabs (Current/History/Reports/Statistics)
 
 ### v1.8.1-beta (2025-10-20)
 

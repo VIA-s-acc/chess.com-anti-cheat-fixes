@@ -1,7 +1,9 @@
 /**
  * Reports Service - Track reported users and check account status
- * @version 1.4.0
+ * @version 2.0.0
  */
+
+import GlobalDatabaseService from './GlobalDatabaseService.js';
 
 const STORAGE_KEY = 'reports';
 const MAX_REPORTS = 500;
@@ -11,6 +13,7 @@ class ReportsService {
     constructor() {
         this.cache = null;
         this.cacheTimestamp = 0;
+        this.globalDbService = GlobalDatabaseService;
     }
 
     /**
@@ -74,7 +77,56 @@ class ReportsService {
         await this.saveReports(reports);
         this.invalidateCache();
 
-        return reports[existingIndex !== -1 ? existingIndex : 0];
+        // Submit to Global Database if enabled
+        const finalReport = reports[existingIndex !== -1 ? existingIndex : 0];
+        this.submitToGlobalDatabase(finalReport, report).catch(err => {
+            console.warn('[ReportsService] Failed to submit to global database:', err);
+            // Don't fail the local report if global DB submission fails
+        });
+
+        return finalReport;
+    }
+
+    /**
+     * Submit report to Global Database
+     */
+    async submitToGlobalDatabase(localReport, originalReport) {
+        try {
+            // Load config to check if enabled
+            await this.globalDbService.loadConfig();
+            const status = this.globalDbService.getStatus();
+
+            if (!status.enabled || !status.isAvailable) {
+                console.log('[ReportsService] Global DB disabled or unavailable, skipping submission');
+                return;
+            }
+
+            // Extract game format from playerStats or default to 'blitz'
+            const format = originalReport.playerStats?.timeControl?.format ||
+                          originalReport.format ||
+                          'blitz';
+
+            // Prepare report for global DB
+            const globalReport = {
+                username: localReport.username,
+                riskScore: localReport.riskScore,
+                format: format,
+                factors: originalReport.factors || {},
+                notes: originalReport.reason || 'Suspicious behavior detected'
+            };
+
+            console.log('[ReportsService] Submitting report to Global DB:', globalReport.username);
+            const result = await this.globalDbService.submitReport(globalReport);
+
+            if (result.success) {
+                console.log('[ReportsService] Report submitted successfully to Global DB');
+            } else {
+                console.warn('[ReportsService] Global DB submission failed:', result.reason);
+            }
+        } catch (error) {
+            console.error('[ReportsService] Error submitting to Global DB:', error);
+            throw error;
+        }
     }
 
     /**

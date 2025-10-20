@@ -142,6 +142,82 @@
                 </div>
             </div>
         </div>
+
+        <!-- Global Database Settings -->
+        <h2>Global Cheater Database</h2>
+        <div class="settings-group">
+            <div class="setting-description" style="margin-bottom: 16px;">
+                Connect to a crowdsourced database to share and receive intelligence about suspicious players.
+            </div>
+
+            <!-- Enable/Disable Global Database -->
+            <div class="setting-item">
+                <label class="switch-label">
+                    <span>Enable Global Database</span>
+                    <div class="switch">
+                        <input type="checkbox" id="GLOBAL_DB_ENABLED">
+                        <span class="slider"></span>
+                    </div>
+                </label>
+                <div class="setting-description">
+                    When enabled, the extension will submit anonymous reports and check player reputations from the global database.
+                </div>
+            </div>
+
+            <!-- Server URL -->
+            <div class="setting-item">
+                <label for="global-db-url">Server URL</label>
+                <input type="text" id="global-db-url" class="text-input" placeholder="http://localhost:8000">
+                <div class="setting-description">
+                    URL of the global database server. Default: http://localhost:8000
+                </div>
+            </div>
+
+            <!-- Connection Status -->
+            <div class="setting-item">
+                <div class="connection-status-container">
+                    <div class="connection-status" id="connection-status">
+                        <span class="status-indicator" id="status-indicator">●</span>
+                        <span class="status-text" id="status-text">Not checked</span>
+                    </div>
+                    <button id="test-connection-btn" class="config-btn" style="margin-top: 8px;">
+                        🔍 Test Connection
+                    </button>
+                </div>
+                <div class="setting-description">
+                    Check if the server is available and responding.
+                </div>
+            </div>
+
+            <!-- Server Information -->
+            <div class="setting-item" id="server-info-container" style="display: none;">
+                <div class="server-info-box">
+                    <h4>Server Information</h4>
+                    <div class="info-row">
+                        <span class="info-label">Status:</span>
+                        <span class="info-value" id="server-status-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Version:</span>
+                        <span class="info-value" id="server-version-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Total Reports:</span>
+                        <span class="info-value" id="server-reports-value">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Uptime:</span>
+                        <span class="info-value" id="server-uptime-value">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Privacy Notice -->
+            <div class="privacy-notice">
+                <strong>Privacy Notice:</strong> Reports are submitted anonymously. No personal information is collected.
+                Only usernames, risk scores, and game formats are shared with the database.
+            </div>
+        </div>
     </div>
     <div class="buttons-container">
         <button id="save-settings" class="save-button">Save Settings</button>

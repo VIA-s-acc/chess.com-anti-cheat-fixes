@@ -1,6 +1,7 @@
 import { RiskDisplay } from './RiskDisplay.js';
 import HistoryView from './HistoryView.js';
 import ReportsView from './ReportsView.js';
+import StatisticsView from './StatisticsView.js';
 import AbortStatus from './AbortStatus.js';
 
 class PopupManager {
@@ -8,6 +9,7 @@ class PopupManager {
         this.display = new RiskDisplay();
         this.historyView = null;
         this.reportsView = null;
+        this.statisticsView = null;
         this.abortStatus = new AbortStatus('abort-status-container');
         this.currentTab = 'current';
         this.currentRiskScore = 0;
@@ -67,6 +69,15 @@ class PopupManager {
                 this.reportsView = new ReportsView(reportsContainer);
             }
             await this.reportsView.render();
+        }
+
+        // Load statistics view if switching to statistics tab
+        if (tabName === 'statistics') {
+            if (!this.statisticsView) {
+                const statisticsContainer = document.getElementById('statistics-tab');
+                this.statisticsView = new StatisticsView(statisticsContainer);
+            }
+            await this.statisticsView.render();
         }
     }
 
