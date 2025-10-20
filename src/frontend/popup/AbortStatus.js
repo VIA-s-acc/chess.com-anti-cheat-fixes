@@ -1,7 +1,9 @@
 /**
  * Abort Status Component - Display abort counter and warnings
- * @version 1.6.0
+ * @version 1.8.0
  */
+
+import ThresholdSettingsService from '../services/ThresholdSettingsService.js';
 
 class AbortStatus {
     constructor(containerId = 'abort-status-container') {
@@ -11,6 +13,7 @@ class AbortStatus {
         }
         this.currentStatus = null;
         this.currentRiskScore = 0;
+        this.thresholdService = ThresholdSettingsService;
     }
 
     /**
@@ -24,7 +27,7 @@ class AbortStatus {
         this.currentStatus = status;
         this.currentRiskScore = riskScore;
 
-        const html = this.renderStatus(status, riskScore);
+        const html = await this.renderStatus(status, riskScore);
         this.container.innerHTML = html;
 
         this.attachEventListeners();
@@ -33,7 +36,7 @@ class AbortStatus {
     /**
      * Render status HTML based on warning level
      */
-    renderStatus(status, riskScore = 0) {
+    async renderStatus(status, riskScore = 0) {
         const {
             abortsUsed,
             abortsRemaining,
@@ -87,7 +90,7 @@ class AbortStatus {
                     </div>
                 ` : ''}
 
-                ${riskScore >= 60 ? `
+                ${await this.shouldShowSkipButton(riskScore) ? `
                     <div class="skip-game-action" style="margin: 12px 0;">
                         <button id="skip-game-btn" class="action-btn abort-btn" style="width: 100%; padding: 10px; background-color: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #ef4444; font-weight: 600;">
                             ⛔ Skip This Game (${abortsRemaining} aborts left)
@@ -332,6 +335,19 @@ This counter helps you avoid that situation by warning you before you hit the li
                 `This extension cannot abort games directly for security reasons.\n\n` +
                 `Aborts left after this: ${remaining - 1}`
             );
+        }
+    }
+
+    /**
+     * Check if skip button should be shown based on custom threshold
+     */
+    async shouldShowSkipButton(riskScore) {
+        try {
+            const thresholds = await this.thresholdService.getThresholds();
+            return riskScore >= thresholds.actionThresholds.showAbortButton;
+        } catch (error) {
+            console.error('[AbortStatus] Failed to get thresholds:', error);
+            return riskScore >= 60; // Fallback to default
         }
     }
 

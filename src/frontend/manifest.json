@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Chess.com Opponent Risk Score",
-  "version": "1.6.0",
-  "description": "Calculate risk scores for Chess.com opponents with history, reports, and abort tracking to avoid cheaters",
+  "version": "1.8.0",
+  "description": "Calculate risk scores for Chess.com opponents with customizable thresholds, history tracking, reports monitoring, and abort management",
   "permissions": [
     "storage",
     "alarms",

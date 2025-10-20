@@ -1,6 +1,6 @@
 {
   "name": "chess-risk-score",
-  "version": "1.6.0-beta",
+  "version": "1.8.0-beta",
   "private": true,
   "type": "module",
   "scripts": {

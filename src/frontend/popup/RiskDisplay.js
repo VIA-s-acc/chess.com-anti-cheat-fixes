@@ -1,5 +1,6 @@
 import { SETTINGS } from '../../config.js';
 import SettingsManager from '../options/SettingsManager.js';
+import ThresholdSettingsService from '../services/ThresholdSettingsService.js';
 
 export class RiskDisplay {
     constructor() {
@@ -7,12 +8,15 @@ export class RiskDisplay {
         this.scoreCircle = document.getElementById('score-circle');
         this.scoreDisplay = document.getElementById('score-display');
         this.factors = document.getElementById('factors');
-        
+
         // Circle circumference (2πr where r=45)
         this.circumference = 2 * Math.PI * 45;
-        
+
         // Store last valid score
         this.lastValidScore = null;
+
+        // Threshold service
+        this.thresholdService = ThresholdSettingsService;
     }
 
     /**
@@ -133,7 +137,7 @@ export class RiskDisplay {
         const { maxScore, otherFormats } = riskData;
         const score = Math.round(maxScore.value || 0);
         const riskLevel = this.getRiskLevelText(score);
-        const colorClass = this.getRiskClass(score);
+        const colorClass = await this.getRiskClass(score);
 
         // Store valid score
         this.lastValidScore = riskData;
@@ -155,7 +159,7 @@ export class RiskDisplay {
         // Update factors
         if (maxScore.factors) {
             console.debug('[RiskDisplay] Updating factors');
-            this.updateFactors(maxScore.factors, otherFormats);
+            await this.updateFactors(maxScore.factors, otherFormats);
         } else {
             console.debug('[RiskDisplay] No factors to update');
         }
@@ -164,12 +168,16 @@ export class RiskDisplay {
     /**
      * Update contributing factors section
      */
-    updateFactors(factors, otherFormats) {
+    async updateFactors(factors, otherFormats) {
         const sections = [];
+
+        // Get custom thresholds
+        const thresholds = await this.thresholdService.getThresholds();
+        const abortButtonThreshold = thresholds.actionThresholds.showAbortButton;
 
         // Calculate overall risk score for action buttons
         const overallScore = this.lastValidScore?.maxScore?.value || 0;
-        const isHighRisk = overallScore >= 60; // High or Critical risk
+        const isHighRisk = overallScore >= abortButtonThreshold; // Use custom threshold
 
         // Add action buttons at the top
         const actionButtons = `
@@ -186,26 +194,30 @@ export class RiskDisplay {
         `;
         sections.push(actionButtons);
 
-        // Helper for factor formatting
-        const formatFactor = (title, raw, weighted, games = null) => `
+        // Helper for factor formatting - pre-calculate risk classes
+        const formatFactor = async (title, raw, weighted, games = null) => {
+            const weightedClass = await this.getRiskClass(weighted);
+            const rawClass = await this.getRiskClass(raw);
+            return `
             <div class="factor-item">
                 <div class="factor-header">
                     <span>${title}</span>
-                    <span class="${this.getRiskClass(weighted)}">${raw}%</span>
+                    <span class="${rawClass}">${raw}%</span>
                 </div>
                 <div class="factor-details">
                     <div class="factor-score">
                         <span>Score:</span>
-                        <span class="${this.getRiskClass(weighted)}">${Math.round(weighted)}</span>
+                        <span class="${weightedClass}">${Math.round(weighted)}</span>
                     </div>
                     ${games ? `<div class="factor-games">${games} games</div>` : ''}
                 </div>
             </div>
         `;
+        };
 
         // Win rates
         if (factors.overallWinRate) {
-            sections.push(formatFactor(
+            sections.push(await formatFactor(
                 'Overall Win Rate',
                 Math.round(factors.overallWinRate.raw),
                 factors.overallWinRate.weighted,
@@ -214,7 +226,7 @@ export class RiskDisplay {
         }
 
         if (factors.recentWinRate) {
-            sections.push(formatFactor(
+            sections.push(await formatFactor(
                 'Recent Win Rate',
                 Math.round(factors.recentWinRate.raw),
                 factors.recentWinRate.weighted,
@@ -224,11 +236,11 @@ export class RiskDisplay {
 
         // Accuracy
         if (factors.accuracy) {
-            const accuracyPercentage = factors.accuracy.gamesWithAccuracy === 0 
-                ? 0 
+            const accuracyPercentage = factors.accuracy.gamesWithAccuracy === 0
+                ? 0
                 : Math.round((factors.accuracy.highAccuracyGames / factors.accuracy.gamesWithAccuracy) * 100);
-            
-            sections.push(formatFactor(
+
+            sections.push(await formatFactor(
                 'High Accuracy Games',
                 accuracyPercentage,
                 factors.accuracy.weighted,
@@ -238,6 +250,7 @@ export class RiskDisplay {
 
         // Final calculation
         if (factors.calculation) {
+            const afterCapClass = await this.getRiskClass(factors.calculation.afterCap);
             sections.push(`
                 <div class="calculation-section">
                     <div class="calculation-title">Final Calculation</div>
@@ -250,7 +263,7 @@ export class RiskDisplay {
                             <span>Account Age Multiplier</span>
                             <span>×${factors.calculation.accountAgeFactor}</span>
                         </div>
-                        <div class="formula-result ${this.getRiskClass(factors.calculation.afterCap)}">
+                        <div class="formula-result ${afterCapClass}">
                             <span>Final Score</span>
                             <span>${Math.round(factors.calculation.afterCap)}</span>
                         </div>
@@ -265,15 +278,16 @@ export class RiskDisplay {
             const score = Math.round(otherFormat.score);
             console.debug('[RiskDisplay] Adding other format section:', otherFormat.format, 'with score:', score);
 
+            const scoreClass = await this.getRiskClass(score);
             sections.push(`
                 <div class="other-formats-section">
                     <div class="calculation-title">Other Formats</div>
                     <div class="calculation-formula">
                         <div class="formula-item">
                             <span>${otherFormat.format.replace('chess_', '')}</span>
-                            <span class="${this.getRiskClass(score)}">${score}%</span>
+                            <span class="${scoreClass}">${score}%</span>
                         </div>
-                        <div class="formula-result ${this.getRiskClass(score)}">
+                        <div class="formula-result ${scoreClass}">
                             <span>${this.getRiskLevelText(score)}</span>
                         </div>
                     </div>
@@ -395,12 +409,15 @@ export class RiskDisplay {
     }
 
     /**
-     * Get risk level class
+     * Get risk level class based on custom thresholds
      */
-    getRiskClass(score) {
-        if (score <= 25) return 'risk-low';
-        if (score <= 50) return 'risk-medium';
-        if (score <= 75) return 'risk-high';
+    async getRiskClass(score) {
+        const thresholds = await this.thresholdService.getThresholds();
+        const { riskLevels } = thresholds;
+
+        if (score < riskLevels.medium) return 'risk-low';
+        if (score < riskLevels.high) return 'risk-medium';
+        if (score < riskLevels.critical) return 'risk-high';
         return 'risk-critical';
     }
 

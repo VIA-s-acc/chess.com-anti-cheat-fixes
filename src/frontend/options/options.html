@@ -8,7 +8,7 @@
 <body>
     <div class="options-container">
         <!-- General Settings -->
-        <h2>Settings</h2>
+        <h2>General Settings</h2>
         <div class="settings-group">
             <div class="setting-item">
                 <label class="switch-label">
@@ -19,11 +19,11 @@
                     </div>
                 </label>
                 <div class="setting-description">
-                    Turn this off if you want unrated games to be considered as well. 
+                    Turn this off if you want unrated games to be considered as well.
                     Note that this might change the scoring results and lower the score significance.
                 </div>
             </div>
-            
+
             <div class="setting-item">
                 <label class="switch-label">
                     <span>Auto-open popup when opponent detected</span>
@@ -33,8 +33,112 @@
                     </div>
                 </label>
                 <div class="setting-description">
-                    Note: This feature requires Chrome version 127 or higher. 
+                    Note: This feature requires Chrome version 127 or higher.
                     To check your version, visit chrome://version/
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Score Thresholds -->
+        <h2>Risk Score Thresholds</h2>
+        <div class="settings-group">
+            <div class="setting-description" style="margin-bottom: 16px;">
+                Customize when risk levels trigger. Lower values = more sensitive detection.
+            </div>
+
+            <!-- Preset Selection -->
+            <div class="setting-item">
+                <label for="preset-select">Quick Presets</label>
+                <select id="preset-select" class="threshold-select">
+                    <option value="">Custom Configuration</option>
+                    <option value="conservative">Conservative (Higher thresholds)</option>
+                    <option value="balanced">Balanced (Default)</option>
+                    <option value="aggressive">Aggressive (Lower thresholds)</option>
+                    <option value="paranoid">Paranoid (Maximum sensitivity)</option>
+                </select>
+                <div class="setting-description">
+                    Select a preset or customize thresholds manually below.
+                </div>
+            </div>
+
+            <!-- Risk Level Thresholds -->
+            <div class="threshold-group">
+                <h3>Risk Level Thresholds</h3>
+
+                <div class="threshold-item">
+                    <label for="threshold-medium">Medium Risk Threshold</label>
+                    <input type="number" id="threshold-medium" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Score above this triggers yellow/medium risk warning</div>
+                </div>
+
+                <div class="threshold-item">
+                    <label for="threshold-high">High Risk Threshold</label>
+                    <input type="number" id="threshold-high" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Score above this triggers orange/high risk warning</div>
+                </div>
+
+                <div class="threshold-item">
+                    <label for="threshold-critical">Critical Risk Threshold</label>
+                    <input type="number" id="threshold-critical" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Score above this triggers red/critical risk warning</div>
+                </div>
+            </div>
+
+            <!-- Action Thresholds -->
+            <div class="threshold-group">
+                <h3>Action Thresholds</h3>
+
+                <div class="threshold-item">
+                    <label for="threshold-abort-button">Show Abort Button At</label>
+                    <input type="number" id="threshold-abort-button" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Risk score that triggers "Abort Game" / "Skip" buttons</div>
+                </div>
+
+                <div class="threshold-item">
+                    <label for="threshold-auto-warn">Auto-Warn At</label>
+                    <input type="number" id="threshold-auto-warn" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Automatically show warning notification at this score</div>
+                </div>
+
+                <div class="threshold-item">
+                    <label for="threshold-critical-alert">Critical Alert At</label>
+                    <input type="number" id="threshold-critical-alert" min="0" max="100" step="5" class="threshold-input">
+                    <span class="threshold-value"></span>
+                    <div class="setting-description">Show urgent alert notification at this score</div>
+                </div>
+            </div>
+
+            <!-- Import/Export Configuration -->
+            <div class="threshold-group">
+                <h3>Configuration Management</h3>
+
+                <div class="config-buttons">
+                    <button id="export-config-btn" class="config-btn">
+                        📥 Export Configuration
+                    </button>
+                    <button id="import-config-btn" class="config-btn">
+                        📤 Import Configuration
+                    </button>
+                    <input type="file" id="import-config-file" accept=".json" style="display: none;">
+                </div>
+
+                <div class="setting-description">
+                    Export your custom settings to share or backup. Import configurations from JSON files.
+                </div>
+            </div>
+
+            <!-- Reset Button -->
+            <div class="threshold-group">
+                <button id="reset-thresholds-btn" class="reset-btn">
+                    🔄 Reset to Defaults
+                </button>
+                <div class="setting-description">
+                    Restore all thresholds to factory defaults.
                 </div>
             </div>
         </div>
