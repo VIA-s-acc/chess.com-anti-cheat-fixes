@@ -10,18 +10,21 @@ class AbortStatus {
             console.warn('[AbortStatus] Container not found:', containerId);
         }
         this.currentStatus = null;
+        this.currentRiskScore = 0;
     }
 
     /**
      * Update the abort status display
      * @param {Object} status - Status from AbortTrackerService
+     * @param {number} riskScore - Current opponent risk score (optional)
      */
-    async update(status) {
+    async update(status, riskScore = 0) {
         if (!this.container) return;
 
         this.currentStatus = status;
+        this.currentRiskScore = riskScore;
 
-        const html = this.renderStatus(status);
+        const html = this.renderStatus(status, riskScore);
         this.container.innerHTML = html;
 
         this.attachEventListeners();
@@ -30,7 +33,7 @@ class AbortStatus {
     /**
      * Render status HTML based on warning level
      */
-    renderStatus(status) {
+    renderStatus(status, riskScore = 0) {
         const {
             abortsUsed,
             abortsRemaining,
@@ -81,6 +84,14 @@ class AbortStatus {
                 ${warningLevel !== 'safe' ? `
                     <div class="abort-warning-box">
                         ${this.getWarningMessage(warningLevel, abortsRemaining)}
+                    </div>
+                ` : ''}
+
+                ${riskScore >= 60 ? `
+                    <div class="skip-game-action" style="margin: 12px 0;">
+                        <button id="skip-game-btn" class="action-btn abort-btn" style="width: 100%; padding: 10px; background-color: rgba(239, 68, 68, 0.2); border: 2px solid #ef4444; color: #ef4444; font-weight: 600;">
+                            ⛔ Skip This Game (${abortsRemaining} aborts left)
+                        </button>
                     </div>
                 ` : ''}
 
@@ -178,6 +189,11 @@ class AbortStatus {
         const resetBtn = document.getElementById('reset-abort-counter');
         if (resetBtn) {
             resetBtn.addEventListener('click', () => this.resetCounter());
+        }
+
+        const skipBtn = document.getElementById('skip-game-btn');
+        if (skipBtn) {
+            skipBtn.addEventListener('click', () => this.skipGame());
         }
 
         // Start countdown if in cooldown
@@ -285,12 +301,37 @@ This counter helps you avoid that situation by warning you before you hit the li
                 // Get fresh status
                 const statusResponse = await chrome.runtime.sendMessage({ action: 'getAbortStatus' });
                 if (statusResponse.success) {
-                    this.update(statusResponse.status);
+                    this.update(statusResponse.status, this.currentRiskScore);
                 }
             }
         } catch (error) {
             console.error('Failed to reset counter:', error);
             alert('Failed to reset counter');
+        }
+    }
+
+    /**
+     * Skip the current game (abort)
+     */
+    skipGame() {
+        const remaining = this.currentStatus?.abortsRemaining || 0;
+
+        const confirmed = confirm(
+            `⛔ Skip this high-risk opponent?\n\n` +
+            `Risk Score: ${Math.round(this.currentRiskScore)}%\n` +
+            `Aborts remaining: ${remaining}/${this.currentStatus?.abortLimit || 10}\n\n` +
+            `You can only abort games with less than 2 moves.`
+        );
+
+        if (confirmed) {
+            alert(
+                `📌 To abort the game:\n\n` +
+                `1. Go to the Chess.com game tab\n` +
+                `2. Click the "Abort" button on the game board\n` +
+                `3. The abort will be tracked automatically\n\n` +
+                `This extension cannot abort games directly for security reasons.\n\n` +
+                `Aborts left after this: ${remaining - 1}`
+            );
         }
     }
 

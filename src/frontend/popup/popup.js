@@ -10,6 +10,7 @@ class PopupManager {
         this.reportsView = null;
         this.abortStatus = new AbortStatus('abort-status-container');
         this.currentTab = 'current';
+        this.currentRiskScore = 0;
         this.port = null;
         this.setupConnection();
         this.setupTabs();
@@ -21,7 +22,7 @@ class PopupManager {
         try {
             const response = await chrome.runtime.sendMessage({ action: 'getAbortStatus' });
             if (response.success) {
-                await this.abortStatus.update(response.status);
+                await this.abortStatus.update(response.status, this.currentRiskScore);
             }
         } catch (error) {
             console.error('Failed to load abort status:', error);
@@ -117,21 +118,31 @@ class PopupManager {
                     }
                     */
 
-                    // Directly update display without the extra opponent check
+                    // Store current risk score and update display
+                    this.currentRiskScore = Math.round(message.data.maxScore?.value || 0);
                     this.display.updateDisplay(message.data);
+
+                    // Also update abort status with new risk score
+                    if (this.abortStatus) {
+                        const response = await chrome.runtime.sendMessage({ action: 'getAbortStatus' });
+                        if (response.success) {
+                            await this.abortStatus.update(response.status, this.currentRiskScore);
+                        }
+                    }
                     break;
-                    
+
                 case 'calculatingRiskScore':
                     this.display.showLoading();
                     break;
-                    
+
                 case 'clearDisplay':
+                    this.currentRiskScore = 0;
                     this.display.showInfo('No active game detected', 'Open a live Chess.com game to analyze your opponent');
                     break;
 
                 case 'abortStatusUpdate':
                     if (message.status && this.abortStatus) {
-                        await this.abortStatus.update(message.status);
+                        await this.abortStatus.update(message.status, this.currentRiskScore);
                     }
                     break;
 
