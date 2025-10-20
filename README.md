@@ -38,6 +38,16 @@ A Chrome extension that helps detect potential cheaters on Chess.com by calculat
 - **STOP PLAYING Alerts:** Critical warnings during cooldown to avoid cheaters
 - **Live Countdown:** Real-time timer showing cooldown remaining
 - **Smart Recommendations:** Context-aware advice based on abort status
+- **High-Risk Abort Buttons:** Quick abort/skip buttons for suspicious opponents
+
+### Enhanced Features (v1.8.0+)
+
+- **Customizable Thresholds:** Fine-tune detection sensitivity for your playstyle
+- **Risk Level Configuration:** Adjust when Medium/High/Critical warnings trigger
+- **Action Thresholds:** Control when abort buttons and alerts appear
+- **Quick Presets:** 4 ready-to-use configurations (Conservative/Balanced/Aggressive/Paranoid)
+- **Import/Export Configs:** Share and backup your custom settings as JSON
+- **Real-Time UI Updates:** Colors and warnings adapt to your thresholds instantly
 
 ## Installation
 
@@ -83,16 +93,74 @@ For detailed information about the mathematical model and methodology, read the 
 
 ## Configuration
 
-Default settings and thresholds can be adjusted [here](https://github.com/tim-sha256/chess.com-anti-cheat/blob/main/src/config.js):
+### General Settings
 
-```javascript
-export const SETTINGS = {
-  RATED_ONLY: true, // When true, only consider rated games for risk score
-  AUTO_OPEN_POPUP: true // When true, automatically open popup when opponent is detected
-};
-```
+Access the extension's options page to configure:
+
+- **Rated Games Only**: Include only rated games in risk calculations
+- **Auto-Open Popup**: Automatically open popup when opponent is detected (Chrome 127+)
+
+### Risk Score Thresholds (v1.8.0+)
+
+Customize detection sensitivity in the options page:
+
+**Quick Presets:**
+- **Conservative** (40/60/80/95): Higher thresholds, fewer false positives
+- **Balanced** (30/50/70/85): Default settings, balanced sensitivity
+- **Aggressive** (20/40/60/80): Lower thresholds, catch more suspects
+- **Paranoid** (15/30/50/70): Maximum sensitivity, flag everything
+
+**Manual Configuration:**
+- Medium/High/Critical risk level thresholds
+- Abort button trigger threshold
+- Auto-warn threshold
+- Critical alert threshold
+
+**Import/Export:**
+- Export your configuration as JSON
+- Import shared configurations from other users
+- Backup and restore your custom settings
 
 ## Changelog
+
+### v1.8.0-beta (2025-10-20)
+
+#### Customizable Risk Score Thresholds
+
+- **ThresholdSettingsService:** Advanced threshold management
+  - Risk level thresholds (Low/Medium/High/Critical)
+  - Action button thresholds (Abort/Warn/Alert)
+  - Import/Export configurations as JSON
+  - Full validation and merge with defaults
+  - Caching system with 5-minute TTL
+
+- **Quick Presets:** 4 pre-configured sensitivity levels
+  - Conservative: Higher thresholds (40/60/80/95)
+  - Balanced: Default settings (30/50/70/85)
+  - Aggressive: Lower thresholds (20/40/60/80)
+  - Paranoid: Maximum sensitivity (15/30/50/70)
+
+- **Settings UI:** Comprehensive threshold configuration
+  - Preset selector dropdown
+  - 6 customizable threshold sliders
+  - Import/Export configuration buttons
+  - Reset to defaults functionality
+  - Real-time validation and feedback
+  - Success/error message display
+
+- **Dynamic Integration:**
+  - RiskDisplay: Colors adapt to custom thresholds
+  - AbortStatus: Skip button respects custom threshold
+  - Real-time UI updates based on preferences
+  - Backward compatible with defaults
+
+- **Configuration Management:**
+  - Export settings as JSON files
+  - Import configurations from files
+  - Version tracking for compatibility
+  - Share optimal settings with others
+
+**Why this matters:** Every player has different tolerance for risk. Customize thresholds to match your playstyle - conservative for casual games, aggressive for competitive play.
 
 ### v1.6.0-beta (2025-10-19)
 
@@ -119,6 +187,14 @@ export const SETTINGS = {
   - Recommendations based on current status
   - Abort history viewer
   - Reset function for testing
+  - "Skip This Game" button (shows at high risk)
+
+- **High-Risk Action Buttons:** Quick abort for suspicious opponents
+  - "Abort Game" button in Contributing Factors (top)
+  - "Skip This Game" button in Abort Counter (bottom)
+  - Both buttons appear when risk score ≥ 60%
+  - Confirmation dialogs with abort instructions
+  - Shows remaining aborts in button text
 
 - **Smart Prevention Logic:**
   - Warns before you hit the limit
