@@ -4,7 +4,19 @@
       "Bash(gh milestone create \"Code Quality & Bug Fixes v1.1\" --description \"Critical bug fixes and code quality improvements identified in code audit\" --due-date \"2025-11-18\")",
       "Bash(git checkout -b fix/code-quality-improvements)",
       "Bash(git add src/frontend/components/GameMonitor.js src/risk-score.js src/test-metrics.js src/utils.js)",
-      "Bash(git remote set-url fork https://github.com/VIA-s-acc/chess.com-anti-cheat-fixes.git)"
+      "Bash(git remote set-url fork https://github.com/VIA-s-acc/chess.com-anti-cheat-fixes.git)",
+      "Bash(npm run build)",
+      "Bash(git add src/frontend/background.js package.json src/frontend/manifest.json)",
+      "Bash(git add src/frontend/services/HistoryService.js ROADMAP_v1.2.md)",
+      "Bash(git push -u origin feature/v1.2-scoring-history)",
+      "Bash(git push -u fork feature/v1.2-scoring-history)",
+      "Bash(git add src/frontend/popup/)",
+      "Bash(git push fork feature/v1.4-reports-tracking)",
+      "Bash(git merge feature/v1.2-scoring-history -m \"Merge branch ''feature/v1.2-scoring-history'' into main\")",
+      "Bash(git merge feature/v1.4-reports-tracking -m \"Merge branch ''feature/v1.4-reports-tracking'' into main\")",
+      "Bash(git checkout -b feature/v1.6-abort-tracker)",
+      "Bash(git add -A)",
+      "Bash(git restore --staged .claude/settings.local.json)"
     ],
     "deny": [],
     "ask": []

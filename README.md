@@ -30,6 +30,25 @@ A Chrome extension that helps detect potential cheaters on Chess.com by calculat
 - **Encounter Tracking:** See how many times you've faced the same opponent
 - **Status History:** Complete audit trail of account status changes
 
+### Enhanced Features (v1.6.0+)
+
+- **Abort Counter:** Real-time tracking of game aborts
+- **Cooldown Detection:** Automatic detection of abort cooldown periods
+- **Proactive Warnings:** Alerts before you hit the abort limit
+- **STOP PLAYING Alerts:** Critical warnings during cooldown to avoid cheaters
+- **Live Countdown:** Real-time timer showing cooldown remaining
+- **Smart Recommendations:** Context-aware advice based on abort status
+- **High-Risk Abort Buttons:** Quick abort/skip buttons for suspicious opponents
+
+### Enhanced Features (v1.8.0+)
+
+- **Customizable Thresholds:** Fine-tune detection sensitivity for your playstyle
+- **Risk Level Configuration:** Adjust when Medium/High/Critical warnings trigger
+- **Action Thresholds:** Control when abort buttons and alerts appear
+- **Quick Presets:** 4 ready-to-use configurations (Conservative/Balanced/Aggressive/Paranoid)
+- **Import/Export Configs:** Share and backup your custom settings as JSON
+- **Real-Time UI Updates:** Colors and warnings adapt to your thresholds instantly
+
 ## Installation
 
 Install directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/chesscom-opponent-risk-sc/oiemcgpbdohnhkplobgndgdhdlbafoeg).
@@ -74,16 +93,116 @@ For detailed information about the mathematical model and methodology, read the 
 
 ## Configuration
 
-Default settings and thresholds can be adjusted [here](https://github.com/tim-sha256/chess.com-anti-cheat/blob/main/src/config.js):
+### General Settings
 
-```javascript
-export const SETTINGS = {
-  RATED_ONLY: true, // When true, only consider rated games for risk score
-  AUTO_OPEN_POPUP: true // When true, automatically open popup when opponent is detected
-};
-```
+Access the extension's options page to configure:
+
+- **Rated Games Only**: Include only rated games in risk calculations
+- **Auto-Open Popup**: Automatically open popup when opponent is detected (Chrome 127+)
+
+### Risk Score Thresholds (v1.8.0+)
+
+Customize detection sensitivity in the options page:
+
+**Quick Presets:**
+- **Conservative** (40/60/80/95): Higher thresholds, fewer false positives
+- **Balanced** (30/50/70/85): Default settings, balanced sensitivity
+- **Aggressive** (20/40/60/80): Lower thresholds, catch more suspects
+- **Paranoid** (15/30/50/70): Maximum sensitivity, flag everything
+
+**Manual Configuration:**
+- Medium/High/Critical risk level thresholds
+- Abort button trigger threshold
+- Auto-warn threshold
+- Critical alert threshold
+
+**Import/Export:**
+- Export your configuration as JSON
+- Import shared configurations from other users
+- Backup and restore your custom settings
 
 ## Changelog
+
+### v1.8.0-beta (2025-10-20)
+
+#### Customizable Risk Score Thresholds
+
+- **ThresholdSettingsService:** Advanced threshold management
+  - Risk level thresholds (Low/Medium/High/Critical)
+  - Action button thresholds (Abort/Warn/Alert)
+  - Import/Export configurations as JSON
+  - Full validation and merge with defaults
+  - Caching system with 5-minute TTL
+
+- **Quick Presets:** 4 pre-configured sensitivity levels
+  - Conservative: Higher thresholds (40/60/80/95)
+  - Balanced: Default settings (30/50/70/85)
+  - Aggressive: Lower thresholds (20/40/60/80)
+  - Paranoid: Maximum sensitivity (15/30/50/70)
+
+- **Settings UI:** Comprehensive threshold configuration
+  - Preset selector dropdown
+  - 6 customizable threshold sliders
+  - Import/Export configuration buttons
+  - Reset to defaults functionality
+  - Real-time validation and feedback
+  - Success/error message display
+
+- **Dynamic Integration:**
+  - RiskDisplay: Colors adapt to custom thresholds
+  - AbortStatus: Skip button respects custom threshold
+  - Real-time UI updates based on preferences
+  - Backward compatible with defaults
+
+- **Configuration Management:**
+  - Export settings as JSON files
+  - Import configurations from files
+  - Version tracking for compatibility
+  - Share optimal settings with others
+
+**Why this matters:** Every player has different tolerance for risk. Customize thresholds to match your playstyle - conservative for casual games, aggressive for competitive play.
+
+### v1.6.0-beta (2025-10-19)
+
+#### Abort Counter & Cooldown Tracker
+
+- **AbortTrackerService:** Smart abort monitoring system
+  - Track all game aborts automatically
+  - Rolling 1-hour window for abort counting
+  - Limit detection (~10 aborts before cooldown)
+  - 15-minute cooldown tracking
+  - Abort history with opponent names and timestamps
+
+- **Cooldown Prevention:** Proactive warnings to avoid lockout
+  - Warning at 8/10 aborts used
+  - Critical alert when limit reached
+  - Real-time cooldown countdown timer
+  - Browser notifications for warnings
+  - "STOP PLAYING" alerts during cooldown
+
+- **Abort Status UI:** Visual abort counter in popup
+  - Color-coded status (green/yellow/red)
+  - Progress bar showing aborts used
+  - Live countdown during cooldown period
+  - Recommendations based on current status
+  - Abort history viewer
+  - Reset function for testing
+  - "Skip This Game" button (shows at high risk)
+
+- **High-Risk Action Buttons:** Quick abort for suspicious opponents
+  - "Abort Game" button in Contributing Factors (top)
+  - "Skip This Game" button in Abort Counter (bottom)
+  - Both buttons appear when risk score ≥ 60%
+  - Confirmation dialogs with abort instructions
+  - Shows remaining aborts in button text
+
+- **Smart Prevention Logic:**
+  - Warns before you hit the limit
+  - Prevents playing during cooldown (can't abort cheaters!)
+  - Shows exact time remaining in cooldown
+  - Tracks total aborts and cooldown events
+
+**Why this matters:** During cooldown, you cannot abort games. If you face a cheater, you'll be forced to play or resign. This feature helps you avoid that situation.
 
 ### v1.4.0-beta (2025-10-19)
 
