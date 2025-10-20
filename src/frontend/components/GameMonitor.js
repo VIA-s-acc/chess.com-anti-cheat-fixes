@@ -258,11 +258,84 @@ class GameMonitor {
     detectGameAborted() {
         if (this.currentState.isGameAborted) return false;
 
+        // Method 1: Check modal with "Game Aborted" title
         const abortedModal = document.querySelector('.board-modal-container-container');
-        if (!abortedModal) return false;
+        if (abortedModal) {
+            const headerTitle = abortedModal.querySelector('.header-title-component');
+            const modalText = abortedModal.textContent || '';
+            if (headerTitle?.textContent.trim() === 'Game Aborted' ||
+                modalText.toLowerCase().includes('game aborted')) {
+                console.log('[GameMonitor] Game aborted detected via modal title');
+                return true;
+            }
+        }
 
-        const headerTitle = abortedModal.querySelector('.header-title-component');
-        return headerTitle?.textContent.trim() === 'Game Aborted';
+        // Method 2: Check for abort in game over message
+        const gameOverMessage = document.querySelector('.game-over-message-component');
+        if (gameOverMessage) {
+            const content = gameOverMessage.textContent || '';
+            // Check for "aborted" in any language (English/Russian/etc)
+            if (content.toLowerCase().includes('aborted') ||
+                content.toLowerCase().includes('прервана')) {
+                console.log('[GameMonitor] Game aborted detected via game-over-message-component');
+                return true;
+            }
+        }
+
+        // Method 3: Check for abort in game over modal
+        const gameOverModal = document.querySelector('.game-over-modal-component');
+        if (gameOverModal) {
+            const content = gameOverModal.textContent || '';
+            if (content.toLowerCase().includes('aborted') ||
+                content.toLowerCase().includes('прервана')) {
+                console.log('[GameMonitor] Game aborted detected via game-over modal');
+                return true;
+            }
+        }
+
+        // Method 3: Check game result indicators
+        const resultIndicators = document.querySelectorAll('.game-result-component, .board-result-component, .result-message-component');
+        for (const indicator of resultIndicators) {
+            const text = indicator.textContent || '';
+            if (text.toLowerCase().includes('aborted')) {
+                console.log('[GameMonitor] Game aborted detected via result indicator');
+                return true;
+            }
+        }
+
+        // Method 4: Check for abort notification/message
+        const notifications = document.querySelectorAll('.notification-component, .game-message-component, .board-message-component');
+        for (const notification of notifications) {
+            const text = notification.textContent || '';
+            if (text.toLowerCase().includes('game has been aborted') ||
+                text.toLowerCase().includes('game was aborted') ||
+                text.toLowerCase().includes('aborted')) {
+                console.log('[GameMonitor] Game aborted detected via notification');
+                return true;
+            }
+        }
+
+        // Method 5: Check for "aborted" anywhere in modal dialogs
+        const allModals = document.querySelectorAll('[class*="modal"], [class*="dialog"]');
+        for (const modal of allModals) {
+            const text = modal.textContent || '';
+            if (text.toLowerCase().includes('aborted')) {
+                console.log('[GameMonitor] Game aborted detected via generic modal:', modal.className);
+                return true;
+            }
+        }
+
+        // Method 6: Check for board overlay messages
+        const boardOverlays = document.querySelectorAll('.board-layout-component [class*="message"], .board-layout-component [class*="overlay"]');
+        for (const overlay of boardOverlays) {
+            const text = overlay.textContent || '';
+            if (text.toLowerCase().includes('aborted')) {
+                console.log('[GameMonitor] Game aborted detected via board overlay');
+                return true;
+            }
+        }
+
+        return false;
     }
 
     isValidUsername(username) {
@@ -339,6 +412,25 @@ class GameMonitor {
     }
 
     async checkForGameChanges() {
+        // Always check for abort immediately, even if debounce hasn't passed
+        const abortedNow = this.detectGameAborted();
+        if (abortedNow) {
+            this.currentState.isGameAborted = true;
+            console.log('[GameMonitor] Notifying background about game abort');
+            console.log('[GameMonitor] Abort details:', {
+                gameId: this.currentState.gameId,
+                opponentUsername: this.currentState.opponentUsername,
+                moveCount: this.currentState.moveList?.length || 0
+            });
+            await this.notifyStateChange('game_aborted', {
+                gameId: this.currentState.gameId,
+                opponentUsername: this.currentState.opponentUsername,
+                moveCount: this.currentState.moveList?.length || 0
+            });
+            return; // Exit early after detecting abort
+        }
+
+        // Regular debounced checks for other game state changes
         if (!this.shouldCheck()) return;
 
         const gameId = await StorageService.extractGameId(window.location.href);
@@ -372,16 +464,10 @@ class GameMonitor {
         }
 
         const moves = this.detectMoves();
-        const aborted = this.detectGameAborted();
 
         if (moves) {
             this.currentState.moveList = moves;
             await this.notifyStateChange('moves_updated', { moves });
-        }
-
-        if (aborted) {
-            this.currentState.isGameAborted = true;
-            await this.notifyStateChange('game_aborted');
         }
     }
 

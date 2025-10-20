@@ -123,6 +123,21 @@ Customize detection sensitivity in the options page:
 
 ## Changelog
 
+### v1.8.1-beta (2025-10-20)
+
+#### Abort Counter Fix
+
+- **Fixed Abort Detection:** Abort counter now properly updates when games are aborted
+- **Multi-Language Support:** Detects abort in English ("aborted") and Russian ("прервана")
+- **Improved Detection Methods:**
+  - Added `.game-over-message-component` selector
+  - 6 different abort detection methods for reliability
+  - No debounce delay - instant abort detection
+  - Enhanced logging for debugging
+- **Better Data Passing:** Improved abort data transmission from content script to background
+
+**Bug Fixed:** Previously, the abort counter would not update when users aborted games. Now it tracks all aborts immediately and reliably.
+
 ### v1.8.0-beta (2025-10-20)
 
 #### Customizable Risk Score Thresholds

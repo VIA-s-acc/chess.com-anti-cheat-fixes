@@ -360,18 +360,26 @@ async function handleGameStateChange(updateType, data) {
             case 'game_aborted':
                 currentGameState.isGameAborted = true;
                 currentGameState.timestamp = data.timestamp;
-                log('info', 'Game aborted');
+                log('info', 'Game aborted event received');
+                log('info', 'Abort data:', {
+                    gameId: currentGameState.gameId || data.gameId,
+                    opponentUsername: currentGameState.opponentUsername || data.opponentUsername,
+                    moveCount: currentGameState.moveList?.length || data.moveCount || 0
+                });
 
                 // Track abort and check for cooldown
                 try {
-                    const abortResult = await abortTrackerService.recordAbort({
-                        gameId: currentGameState.gameId || data.gameId,
-                        opponentUsername: currentGameState.opponentUsername,
-                        moveCount: currentGameState.moveList?.length || 0,
+                    const abortData = {
+                        gameId: currentGameState.gameId || data.gameId || 'unknown',
+                        opponentUsername: currentGameState.opponentUsername || data.opponentUsername || null,
+                        moveCount: currentGameState.moveList?.length || data.moveCount || 0,
                         reason: 'User aborted game'
-                    });
+                    };
 
-                    log('info', `Abort recorded: ${abortResult.abortCount}/${10} used`);
+                    log('info', 'Recording abort with data:', abortData);
+                    const abortResult = await abortTrackerService.recordAbort(abortData);
+
+                    log('info', `Abort recorded successfully: ${abortResult.abortCount}/${10} used`);
 
                     // Send notification if warning threshold reached
                     if (abortResult.shouldWarn && !abortResult.isInCooldown) {
